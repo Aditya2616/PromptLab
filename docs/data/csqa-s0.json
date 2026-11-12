@@ -1,0 +1,901 @@
+{
+ "schema": 1,
+ "recorded": true,
+ "created": "2026-11-12T14:50:20Z",
+ "promptlab_version": "0.1.0",
+ "git": {
+  "commit": "530c703",
+  "dirty": false
+ },
+ "backend": "local",
+ "model": "Qwen/Qwen2.5-0.5B-Instruct",
+ "seed": 0,
+ "config": {
+  "generations": 3,
+  "pop": 4,
+  "children": 4,
+  "seed": 0,
+  "selection": "tournament",
+  "tournament": 2,
+  "max_words": 70,
+  "attempts_per_child": 30
+ },
+ "task": {
+  "name": "csqa",
+  "title": "CommonsenseQA",
+  "description": "Five-way commonsense multiple choice. Score: extracted option letter equals the gold letter.",
+  "source": "tau/commonsense_qa (MIT)",
+  "n_pool": 60,
+  "n_dev": 40,
+  "n_test": 100
+ },
+ "nodes": [
+  {
+   "id": "09e10dc3",
+   "gen": 0,
+   "parents": [],
+   "operator": "seed",
+   "origin": "seed",
+   "text": "You are a helpful assistant.",
+   "sentences": [
+    "You are a helpful assistant."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.225,
+   "dev_ci": [
+    0.1231595325467853,
+    0.3750339640409305
+   ],
+   "dev_bits": "0000000111000001000101010000010000001000",
+   "culled_at": 1
+  },
+  {
+   "id": "001a1493",
+   "gen": 0,
+   "parents": [],
+   "operator": "seed",
+   "origin": "seed",
+   "text": "Answer the question.",
+   "sentences": [
+    "Answer the question."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.15,
+   "dev_ci": [
+    0.07061091708507435,
+    0.2907262603902003
+   ],
+   "dev_bits": "0000000101000100000000001000000000001010",
+   "culled_at": 0
+  },
+  {
+   "id": "ce3caaff",
+   "gen": 0,
+   "parents": [],
+   "operator": "seed",
+   "origin": "seed",
+   "text": "Answer the following multiple-choice question.",
+   "sentences": [
+    "Answer the following multiple-choice question."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.025,
+   "dev_ci": [
+    0.0044267174077949195,
+    0.1288165948800778
+   ],
+   "dev_bits": "0000000000000000000000001000000000000000",
+   "culled_at": 0
+  },
+  {
+   "id": "561dcef1",
+   "gen": 0,
+   "parents": [],
+   "operator": "seed",
+   "origin": "seed",
+   "text": "Think carefully and choose the best option.",
+   "sentences": [
+    "Think carefully and choose the best option."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.325,
+   "dev_ci": [
+    0.20084316962661725,
+    0.4798254191110201
+   ],
+   "dev_bits": "0100001101000101000011001000010001001010",
+   "culled_at": 2
+  },
+  {
+   "id": "5bef87c7",
+   "gen": 0,
+   "parents": [],
+   "operator": "seed",
+   "origin": "seed",
+   "text": "You are an expert at commonsense reasoning. Pick the most plausible answer.",
+   "sentences": [
+    "You are an expert at commonsense reasoning.",
+    "Pick the most plausible answer."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.375,
+   "dev_ci": [
+    0.2422277353579172,
+    0.529678399454681
+   ],
+   "dev_bits": "1100001111000001000111000000010101001010",
+   "culled_at": null
+  },
+  {
+   "id": "cfca920c",
+   "gen": 0,
+   "parents": [],
+   "operator": "seed",
+   "origin": "seed",
+   "text": "Read the question and the options, then respond with the correct option.",
+   "sentences": [
+    "Read the question and the options, then respond with the correct option."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.425,
+   "dev_ci": [
+    0.28509168524815875,
+    0.5780519956394001
+   ],
+   "dev_bits": "1000011111000101000101001100010101001010",
+   "culled_at": null
+  },
+  {
+   "id": "d227ab9c",
+   "gen": 1,
+   "parents": [
+    "cfca920c"
+   ],
+   "operator": "llm_rewrite",
+   "origin": "evolution",
+   "text": "Read the question carefully and select the appropriate option from the provided choices.",
+   "sentences": [
+    "Read the question carefully and select the appropriate option from the provided choices."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.1,
+   "dev_ci": [
+    0.03957888759557486,
+    0.23052074380473897
+   ],
+   "dev_bits": "0100000001000000000000001100000000000000",
+   "culled_at": 1
+  },
+  {
+   "id": "43a01666",
+   "gen": 1,
+   "parents": [
+    "561dcef1",
+    "5bef87c7"
+   ],
+   "operator": "crossover",
+   "origin": "evolution",
+   "text": "Think carefully and choose the best option. You are an expert at commonsense reasoning. Pick the most plausible answer.",
+   "sentences": [
+    "Think carefully and choose the best option.",
+    "You are an expert at commonsense reasoning.",
+    "Pick the most plausible answer."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.3,
+   "dev_ci": [
+    0.18074670915695296,
+    0.454303106543204
+   ],
+   "dev_bits": "0100001111000100000001000000010101001010",
+   "culled_at": 1
+  },
+  {
+   "id": "3986bdf6",
+   "gen": 1,
+   "parents": [
+    "561dcef1"
+   ],
+   "operator": "llm_rewrite",
+   "origin": "evolution",
+   "text": "Carefully consider your options before making a decision.",
+   "sentences": [
+    "Carefully consider your options before making a decision."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.25,
+   "dev_ci": [
+    0.14186967895549518,
+    0.40194259066970106
+   ],
+   "dev_bits": "1000001101000100000101001000000000001010",
+   "culled_at": 1
+  },
+  {
+   "id": "11c1c0b5",
+   "gen": 1,
+   "parents": [
+    "cfca920c"
+   ],
+   "operator": "swap_format",
+   "origin": "evolution",
+   "text": "Read the question and the options, then respond with the correct option. Answer with a single letter (A-E) and nothing else.",
+   "sentences": [
+    "Read the question and the options, then respond with the correct option."
+   ],
+   "fmt": "Answer with a single letter (A-E) and nothing else.",
+   "n_shots": 0,
+   "dev_acc": 0.375,
+   "dev_ci": [
+    0.2422277353579172,
+    0.529678399454681
+   ],
+   "dev_bits": "1100111111001100000110001000010001000000",
+   "culled_at": 3
+  },
+  {
+   "id": "d9d699f7",
+   "gen": 2,
+   "parents": [
+    "5bef87c7"
+   ],
+   "operator": "add_shot",
+   "origin": "evolution",
+   "text": "You are an expert at commonsense reasoning. Pick the most plausible answer.\nExample: It was tradition for the team to enter what through the central passage? / A. access ro...  =>  B",
+   "sentences": [
+    "You are an expert at commonsense reasoning.",
+    "Pick the most plausible answer."
+   ],
+   "fmt": "",
+   "n_shots": 1,
+   "dev_acc": 0.4,
+   "dev_ci": [
+    0.2634811061240136,
+    0.5540438017260649
+   ],
+   "dev_bits": "0000001101010101000010001100001101011110",
+   "culled_at": null
+  },
+  {
+   "id": "35cbc51f",
+   "gen": 2,
+   "parents": [
+    "cfca920c"
+   ],
+   "operator": "llm_reflect",
+   "origin": "evolution",
+   "text": "Read the question and the options, then provide the correct response.",
+   "sentences": [
+    "Read the question and the options, then provide the correct response."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.1,
+   "dev_ci": [
+    0.03957888759557486,
+    0.23052074380473897
+   ],
+   "dev_bits": "0100000101000000000000001000000000000000",
+   "culled_at": 2
+  },
+  {
+   "id": "42adc964",
+   "gen": 2,
+   "parents": [
+    "cfca920c"
+   ],
+   "operator": "llm_rewrite",
+   "origin": "evolution",
+   "text": "Read the question and options, select the correct answer, and provide it.",
+   "sentences": [
+    "Read the question and options, select the correct answer, and provide it."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.3,
+   "dev_ci": [
+    0.18074670915695296,
+    0.454303106543204
+   ],
+   "dev_bits": "0100001111000001000100001000010001001010",
+   "culled_at": 2
+  },
+  {
+   "id": "0892f270",
+   "gen": 2,
+   "parents": [
+    "11c1c0b5"
+   ],
+   "operator": "add_clause",
+   "origin": "evolution",
+   "text": "Read the question and the options, then respond with the correct option. Do not use punctuation in your answer. Answer with a single letter (A-E) and nothing else.",
+   "sentences": [
+    "Read the question and the options, then respond with the correct option.",
+    "Do not use punctuation in your answer."
+   ],
+   "fmt": "Answer with a single letter (A-E) and nothing else.",
+   "n_shots": 0,
+   "dev_acc": 0.375,
+   "dev_ci": [
+    0.2422277353579172,
+    0.529678399454681
+   ],
+   "dev_bits": "1000110111001101000010001000010011000100",
+   "culled_at": 2
+  },
+  {
+   "id": "430e470c",
+   "gen": 3,
+   "parents": [
+    "cfca920c"
+   ],
+   "operator": "add_clause",
+   "origin": "evolution",
+   "text": "Focus on the key information. Read the question and the options, then respond with the correct option.",
+   "sentences": [
+    "Focus on the key information.",
+    "Read the question and the options, then respond with the correct option."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.375,
+   "dev_ci": [
+    0.2422277353579172,
+    0.529678399454681
+   ],
+   "dev_bits": "1000011111000101000001001000010101001010",
+   "culled_at": 3
+  },
+  {
+   "id": "2c5590e7",
+   "gen": 3,
+   "parents": [
+    "d9d699f7"
+   ],
+   "operator": "swap_format",
+   "origin": "evolution",
+   "text": "You are an expert at commonsense reasoning. Pick the most plausible answer. Output the option letter only.\nExample: It was tradition for the team to enter what through the central passage? / A. access ro...  =>  B",
+   "sentences": [
+    "You are an expert at commonsense reasoning.",
+    "Pick the most plausible answer."
+   ],
+   "fmt": "Output the option letter only.",
+   "n_shots": 1,
+   "dev_acc": 0.375,
+   "dev_ci": [
+    0.2422277353579172,
+    0.529678399454681
+   ],
+   "dev_bits": "0000001101000101000011001000011101001110",
+   "culled_at": 3
+  },
+  {
+   "id": "4c608da6",
+   "gen": 3,
+   "parents": [
+    "11c1c0b5"
+   ],
+   "operator": "add_shot",
+   "origin": "evolution",
+   "text": "Read the question and the options, then respond with the correct option. Answer with a single letter (A-E) and nothing else.\nExample: One way to relieve your hunger if you live near the coast is to do what? / A. grill / B...  =>  C",
+   "sentences": [
+    "Read the question and the options, then respond with the correct option."
+   ],
+   "fmt": "Answer with a single letter (A-E) and nothing else.",
+   "n_shots": 1,
+   "dev_acc": 0.45,
+   "dev_ci": [
+    0.30705075280944694,
+    0.6017117011155924
+   ],
+   "dev_bits": "0000101101000101000011000100111101011110",
+   "culled_at": null
+  },
+  {
+   "id": "311f2501",
+   "gen": 3,
+   "parents": [
+    "5bef87c7"
+   ],
+   "operator": "drop_clause",
+   "origin": "evolution",
+   "text": "You are an expert at commonsense reasoning.",
+   "sentences": [
+    "You are an expert at commonsense reasoning."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.15,
+   "dev_ci": [
+    0.07061091708507435,
+    0.2907262603902003
+   ],
+   "dev_bits": "0000000101000000000100010000000000001010",
+   "culled_at": 3
+  }
+ ],
+ "generations": [
+  {
+   "gen": 0,
+   "born": [
+    "09e10dc3",
+    "001a1493",
+    "ce3caaff",
+    "561dcef1",
+    "5bef87c7",
+    "cfca920c"
+   ],
+   "survivors": [
+    "cfca920c",
+    "5bef87c7",
+    "561dcef1",
+    "09e10dc3"
+   ],
+   "best_dev": 0.425,
+   "mean_dev": 0.3375,
+   "evaluated_total": 6
+  },
+  {
+   "gen": 1,
+   "born": [
+    "d227ab9c",
+    "43a01666",
+    "3986bdf6",
+    "11c1c0b5"
+   ],
+   "survivors": [
+    "cfca920c",
+    "5bef87c7",
+    "11c1c0b5",
+    "561dcef1"
+   ],
+   "best_dev": 0.425,
+   "mean_dev": 0.375,
+   "evaluated_total": 10
+  },
+  {
+   "gen": 2,
+   "born": [
+    "d9d699f7",
+    "35cbc51f",
+    "42adc964",
+    "0892f270"
+   ],
+   "survivors": [
+    "cfca920c",
+    "d9d699f7",
+    "5bef87c7",
+    "11c1c0b5"
+   ],
+   "best_dev": 0.425,
+   "mean_dev": 0.39375,
+   "evaluated_total": 14
+  },
+  {
+   "gen": 3,
+   "born": [
+    "430e470c",
+    "2c5590e7",
+    "4c608da6",
+    "311f2501"
+   ],
+   "survivors": [
+    "4c608da6",
+    "cfca920c",
+    "d9d699f7",
+    "5bef87c7"
+   ],
+   "best_dev": 0.45,
+   "mean_dev": 0.4125,
+   "evaluated_total": 18
+  }
+ ],
+ "winner": "4c608da6",
+ "baseline": {
+  "nodes": [
+   {
+    "id": "34389d36",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "If you are unsure, give your best guess. You are a helpful assistant. Respond in the form 'Answer: X'.",
+    "sentences": [
+     "If you are unsure, give your best guess.",
+     "You are a helpful assistant."
+    ],
+    "fmt": "Respond in the form 'Answer: X'.",
+    "n_shots": 0,
+    "dev_acc": 0.525,
+    "dev_ci": [
+     0.37497106853929735,
+     0.6706477044981831
+    ],
+    "dev_bits": "1000111111010101010011001100010101011010",
+    "culled_at": null
+   },
+   {
+    "id": "8b0115cb",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "Do not use punctuation in your answer. Answer the question. Respond in the form 'Answer: X'.",
+    "sentences": [
+     "Do not use punctuation in your answer.",
+     "Answer the question."
+    ],
+    "fmt": "Respond in the form 'Answer: X'.",
+    "n_shots": 0,
+    "dev_acc": 0.4,
+    "dev_ci": [
+     0.2634811061240136,
+     0.5540438017260649
+    ],
+    "dev_bits": "1000111111010101000011001000000001001010",
+    "culled_at": null
+   },
+   {
+    "id": "d8fd1e76",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "Be precise. Answer the question. Do not explain your answer. Answer in as few words as possible.",
+    "sentences": [
+     "Be precise.",
+     "Answer the question.",
+     "Do not explain your answer.",
+     "Answer in as few words as possible."
+    ],
+    "fmt": "",
+    "n_shots": 0,
+    "dev_acc": 0.325,
+    "dev_ci": [
+     0.20084316962661725,
+     0.4798254191110201
+    ],
+    "dev_bits": "0000001101010101000010001100001001001010",
+    "culled_at": null
+   },
+   {
+    "id": "3986bdf6",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "Carefully consider your options before making a decision.",
+    "sentences": [
+     "Carefully consider your options before making a decision."
+    ],
+    "fmt": "",
+    "n_shots": 0,
+    "dev_acc": 0.25,
+    "dev_ci": [
+     0.14186967895549518,
+     0.40194259066970106
+    ],
+    "dev_bits": "1000001101000100000101001000000000001010",
+    "culled_at": null
+   },
+   {
+    "id": "f87c43ed",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "Read the question and options, select the correct one.\nExample: It was tradition for the team to enter what through the central passage? / A. access ro...  =>  B",
+    "sentences": [
+     "Read the question and options, select the correct one."
+    ],
+    "fmt": "",
+    "n_shots": 1,
+    "dev_acc": 0.4,
+    "dev_ci": [
+     0.2634811061240136,
+     0.5540438017260649
+    ],
+    "dev_bits": "0000101101010101000010001000011001011110",
+    "culled_at": null
+   },
+   {
+    "id": "25cd1f62",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "Answer the question. Read the question carefully.",
+    "sentences": [
+     "Answer the question.",
+     "Read the question carefully."
+    ],
+    "fmt": "",
+    "n_shots": 0,
+    "dev_acc": 0.175,
+    "dev_ci": [
+     0.08745302996883066,
+     0.3195029205439244
+    ],
+    "dev_bits": "0000000101000000000001001100000000001010",
+    "culled_at": null
+   },
+   {
+    "id": "2b932740",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "Think carefully and choose the best option.\nExample: If you're removing dirt from a carpet while doing housework what do you need? / A. broo...  =>  C",
+    "sentences": [
+     "Think carefully and choose the best option."
+    ],
+    "fmt": "",
+    "n_shots": 1,
+    "dev_acc": 0.45,
+    "dev_ci": [
+     0.30705075280944694,
+     0.6017117011155924
+    ],
+    "dev_bits": "0000101101010101010011001100001001011110",
+    "culled_at": null
+   },
+   {
+    "id": "95755ad7",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "Do not use punctuation in your answer. Answer the following multiple-choice question.\nExample: Where are old pictures kept? / A. museum / B. trunk / C. suitcase / D. attic / E. fridge  =>  D",
+    "sentences": [
+     "Do not use punctuation in your answer.",
+     "Answer the following multiple-choice question."
+    ],
+    "fmt": "",
+    "n_shots": 1,
+    "dev_acc": 0.4,
+    "dev_ci": [
+     0.2634811061240136,
+     0.5540438017260649
+    ],
+    "dev_bits": "0001001101000101000011001100011001011010",
+    "culled_at": null
+   },
+   {
+    "id": "11e7e50f",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "Think carefully and choose the best option. Do not use punctuation in your answer. Answer with a single letter (A-E) and nothing else.",
+    "sentences": [
+     "Think carefully and choose the best option.",
+     "Do not use punctuation in your answer."
+    ],
+    "fmt": "Answer with a single letter (A-E) and nothing else.",
+    "n_shots": 0,
+    "dev_acc": 0.225,
+    "dev_ci": [
+     0.1231595325467853,
+     0.3750339640409305
+    ],
+    "dev_bits": "0000000101001100000000001000100010010100",
+    "culled_at": null
+   },
+   {
+    "id": "b13c4a57",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "Answer the question. Be concise.",
+    "sentences": [
+     "Answer the question.",
+     "Be concise."
+    ],
+    "fmt": "",
+    "n_shots": 0,
+    "dev_acc": 0.35,
+    "dev_ci": [
+     0.2213433317104915,
+     0.5049440300646263
+    ],
+    "dev_bits": "1000001101010101000010001100001101001000",
+    "culled_at": null
+   },
+   {
+    "id": "c3e69776",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "I am an assistance tool.\nExample: Sam needed to rest after a long day of work, but he didn't have time to sleep.   So ins...  =>  B",
+    "sentences": [
+     "I am an assistance tool."
+    ],
+    "fmt": "",
+    "n_shots": 1,
+    "dev_acc": 0.4,
+    "dev_ci": [
+     0.2634811061240136,
+     0.5540438017260649
+    ],
+    "dev_bits": "0000001101110111000001001100001001011010",
+    "culled_at": null
+   },
+   {
+    "id": "778daab6",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "Read the question and options carefully before selecting an appropriate response.",
+    "sentences": [
+     "Read the question and options carefully before selecting an appropriate response."
+    ],
+    "fmt": "",
+    "n_shots": 0,
+    "dev_acc": 0.175,
+    "dev_ci": [
+     0.08745302996883066,
+     0.3195029205439244
+    ],
+    "dev_bits": "0100000101000000000000001000010000001010",
+    "culled_at": null
+   }
+  ],
+  "winner": "34389d36",
+  "budget": 12
+ },
+ "operator_stats": [
+  {
+   "operator": "llm_rewrite",
+   "n": 3,
+   "improved": 0,
+   "survived": 0,
+   "mean_delta": -0.17499999999999996
+  },
+  {
+   "operator": "swap_format",
+   "n": 2,
+   "improved": 0,
+   "survived": 1,
+   "mean_delta": -0.037500000000000006
+  },
+  {
+   "operator": "add_shot",
+   "n": 2,
+   "improved": 2,
+   "survived": 2,
+   "mean_delta": 0.05000000000000002
+  },
+  {
+   "operator": "add_clause",
+   "n": 2,
+   "improved": 0,
+   "survived": 0,
+   "mean_delta": -0.024999999999999994
+  },
+  {
+   "operator": "crossover",
+   "n": 1,
+   "improved": 0,
+   "survived": 0,
+   "mean_delta": -0.07500000000000001
+  },
+  {
+   "operator": "llm_reflect",
+   "n": 1,
+   "improved": 0,
+   "survived": 0,
+   "mean_delta": -0.32499999999999996
+  },
+  {
+   "operator": "drop_clause",
+   "n": 1,
+   "improved": 0,
+   "survived": 0,
+   "mean_delta": -0.225
+  }
+ ],
+ "report": {
+  "n_test": 100,
+  "majority_rate": null,
+  "arms": {
+   "seed0": {
+    "label": "seed0",
+    "id": "09e10dc3",
+    "dev_acc": 0.225,
+    "test_acc": 0.34,
+    "test_ci": [
+     0.25,
+     0.43
+    ],
+    "gap": -0.11500000000000002,
+    "test_bits": "0000100101010000011001101001110100011000010100100000000001001001010111010100001000001100110001010000",
+    "text": "You are a helpful assistant."
+   },
+   "best_seed": {
+    "label": "best_seed",
+    "id": "cfca920c",
+    "dev_acc": 0.425,
+    "test_acc": 0.48,
+    "test_ci": [
+     0.38,
+     0.58
+    ],
+    "gap": -0.05499999999999999,
+    "test_bits": "0000101101010000101101101101100010111111010110101111000001000001011110010000011110001100110001010011",
+    "text": "Read the question and the options, then respond with the correct option."
+   },
+   "evolved": {
+    "label": "evolved",
+    "id": "4c608da6",
+    "dev_acc": 0.45,
+    "test_acc": 0.55,
+    "test_ci": [
+     0.45,
+     0.65
+    ],
+    "gap": -0.10000000000000003,
+    "test_bits": "0010011111011000101110111101010001111101010010101111010110001101011110010110101110001110010001010001",
+    "text": "Read the question and the options, then respond with the correct option. Answer with a single letter (A-E) and nothing else.\nExample: One way to relieve your hunger if you live near the coast is to do what? / A. grill / B...  =>  C"
+   },
+   "random": {
+    "label": "random",
+    "id": "34389d36",
+    "dev_acc": 0.525,
+    "test_acc": 0.55,
+    "test_ci": [
+     0.45,
+     0.65
+    ],
+    "gap": -0.025000000000000022,
+    "test_bits": "0011101111011000111110111001110011111101010110000111010110000101011110010110001110001100110001010001",
+    "text": "If you are unsure, give your best guess. You are a helpful assistant. Respond in the form 'Answer: X'."
+   }
+  },
+  "comparisons": {
+   "evolved_vs_seed0": {
+    "diff": 0.21,
+    "lo": 0.09,
+    "hi": 0.33,
+    "p_boot": 0.0004,
+    "a_only": 30,
+    "b_only": 9,
+    "p_mcnemar": 0.0010650196345523
+   },
+   "evolved_vs_best_seed": {
+    "diff": 0.07,
+    "lo": -0.03,
+    "hi": 0.17,
+    "p_boot": 0.2046,
+    "a_only": 17,
+    "b_only": 10,
+    "p_mcnemar": 0.24778856337070465
+   },
+   "evolved_vs_random": {
+    "diff": 0.0,
+    "lo": -0.07,
+    "hi": 0.07,
+    "p_boot": 1.0,
+    "a_only": 7,
+    "b_only": 7,
+    "p_mcnemar": 1.0
+   }
+  }
+ },
+ "calls": {
+  "model_calls": 1569,
+  "cache_hits": 42
+ },
+ "seconds": 2386.3
+}

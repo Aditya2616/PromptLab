@@ -55,7 +55,9 @@ def cmd_export(args: argparse.Namespace) -> int:
     src, dst = Path(args.results), Path(args.docs) / "data"
     dst.mkdir(parents=True, exist_ok=True)
     runs = []
-    for f in sorted(src.glob("*.json")):
+    order = ["csqa", "boolq", "synthetic"]
+    files = sorted(src.glob("*.json"), key=lambda f: (order.index(f.stem.split("-")[0]) if f.stem.split("-")[0] in order else 99, f.name))
+    for f in files:
         d = json.loads(f.read_text(encoding="utf-8"))
         if d.get("schema") != 1 or "report" not in d:
             continue

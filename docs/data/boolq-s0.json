@@ -1,0 +1,885 @@
+{
+ "schema": 1,
+ "recorded": true,
+ "created": "2026-11-12T15:25:41Z",
+ "promptlab_version": "0.1.0",
+ "git": {
+  "commit": "530c703",
+  "dirty": false
+ },
+ "backend": "local",
+ "model": "Qwen/Qwen2.5-0.5B-Instruct",
+ "seed": 0,
+ "config": {
+  "generations": 3,
+  "pop": 4,
+  "children": 4,
+  "seed": 0,
+  "selection": "tournament",
+  "tournament": 2,
+  "max_words": 70,
+  "attempts_per_child": 30
+ },
+ "task": {
+  "name": "boolq",
+  "title": "BoolQ",
+  "description": "Yes/no questions about a short passage. Score: first yes/no/true/false in the reply equals the gold label.",
+  "source": "google/boolq (CC BY-SA 3.0)",
+  "n_pool": 60,
+  "n_dev": 40,
+  "n_test": 100
+ },
+ "nodes": [
+  {
+   "id": "09e10dc3",
+   "gen": 0,
+   "parents": [],
+   "operator": "seed",
+   "origin": "seed",
+   "text": "You are a helpful assistant.",
+   "sentences": [
+    "You are a helpful assistant."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.5,
+   "dev_ci": [
+    0.35199278797099753,
+    0.6480072120290025
+   ],
+   "dev_bits": "1101101101001000011111000001110011010001",
+   "culled_at": 2
+  },
+  {
+   "id": "6168fb74",
+   "gen": 0,
+   "parents": [],
+   "operator": "seed",
+   "origin": "seed",
+   "text": "Answer the question about the passage.",
+   "sentences": [
+    "Answer the question about the passage."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.475,
+   "dev_ci": [
+    0.32935229550181694,
+    0.6250289314607027
+   ],
+   "dev_bits": "1101001101101000111111000001110010000001",
+   "culled_at": 0
+  },
+  {
+   "id": "6f19e9fc",
+   "gen": 0,
+   "parents": [],
+   "operator": "seed",
+   "origin": "seed",
+   "text": "Read the passage and answer the question.",
+   "sentences": [
+    "Read the passage and answer the question."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.475,
+   "dev_ci": [
+    0.32935229550181694,
+    0.6250289314607027
+   ],
+   "dev_bits": "1101001101001000111111000001110010010001",
+   "culled_at": 0
+  },
+  {
+   "id": "ecb00bf9",
+   "gen": 0,
+   "parents": [],
+   "operator": "seed",
+   "origin": "seed",
+   "text": "Decide whether the passage supports a yes or a no.",
+   "sentences": [
+    "Decide whether the passage supports a yes or a no."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.55,
+   "dev_ci": [
+    0.39828829888440775,
+    0.6929492471905531
+   ],
+   "dev_bits": "1101001100001000111111100011110110010101",
+   "culled_at": 2
+  },
+  {
+   "id": "297870fd",
+   "gen": 0,
+   "parents": [],
+   "operator": "seed",
+   "origin": "seed",
+   "text": "You are a careful reader. Use only the passage to answer.",
+   "sentences": [
+    "You are a careful reader.",
+    "Use only the passage to answer."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.5,
+   "dev_ci": [
+    0.35199278797099753,
+    0.6480072120290025
+   ],
+   "dev_bits": "1101001101101000111111000001110011000001",
+   "culled_at": 1
+  },
+  {
+   "id": "b28d798d",
+   "gen": 0,
+   "parents": [],
+   "operator": "seed",
+   "origin": "seed",
+   "text": "Answer the question using the information in the passage.",
+   "sentences": [
+    "Answer the question using the information in the passage."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.5,
+   "dev_ci": [
+    0.35199278797099753,
+    0.6480072120290025
+   ],
+   "dev_bits": "1101001101001000111111000001110011010001",
+   "culled_at": 1
+  },
+  {
+   "id": "3c242d83",
+   "gen": 1,
+   "parents": [
+    "ecb00bf9"
+   ],
+   "operator": "llm_rewrite",
+   "origin": "evolution",
+   "text": "Write a response that clearly states \"Yes\" if the passage supports a yes, and \"No\" if it does not support a yes.",
+   "sentences": [
+    "Write a response that clearly states \"Yes\" if the passage supports a yes, and \"No\" if it does not support a yes."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.65,
+   "dev_ci": [
+    0.4950559699353738,
+    0.7786566682895086
+   ],
+   "dev_bits": "1101101100001001111111100011111110110101",
+   "culled_at": null
+  },
+  {
+   "id": "96ae17fa",
+   "gen": 1,
+   "parents": [
+    "b28d798d",
+    "09e10dc3"
+   ],
+   "operator": "crossover",
+   "origin": "evolution",
+   "text": "Answer the question using the information in the passage. You are a helpful assistant.",
+   "sentences": [
+    "Answer the question using the information in the passage.",
+    "You are a helpful assistant."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.5,
+   "dev_ci": [
+    0.35199278797099753,
+    0.6480072120290025
+   ],
+   "dev_bits": "1101001101001000111111000001110011010001",
+   "culled_at": 1
+  },
+  {
+   "id": "9dc98560",
+   "gen": 1,
+   "parents": [
+    "b28d798d"
+   ],
+   "operator": "llm_rewrite",
+   "origin": "evolution",
+   "text": "Provide answers based on the details provided in the passage.",
+   "sentences": [
+    "Provide answers based on the details provided in the passage."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.5,
+   "dev_ci": [
+    0.35199278797099753,
+    0.6480072120290025
+   ],
+   "dev_bits": "1101001101001000111111000001110011010001",
+   "culled_at": 1
+  },
+  {
+   "id": "82cb59e0",
+   "gen": 1,
+   "parents": [
+    "ecb00bf9"
+   ],
+   "operator": "swap_format",
+   "origin": "evolution",
+   "text": "Decide whether the passage supports a yes or a no. Answer yes or no and nothing else.",
+   "sentences": [
+    "Decide whether the passage supports a yes or a no."
+   ],
+   "fmt": "Answer yes or no and nothing else.",
+   "n_shots": 0,
+   "dev_acc": 0.575,
+   "dev_ci": [
+    0.42194800436059987,
+    0.7149083147518411
+   ],
+   "dev_bits": "1101001101001000111111100011110110010101",
+   "culled_at": 3
+  },
+  {
+   "id": "33b36947",
+   "gen": 2,
+   "parents": [
+    "3c242d83",
+    "82cb59e0"
+   ],
+   "operator": "crossover",
+   "origin": "evolution",
+   "text": "Write a response that clearly states \"Yes\" if the passage supports a yes, and \"No\" if it does not support a yes. Answer yes or no and nothing else.",
+   "sentences": [
+    "Write a response that clearly states \"Yes\" if the passage supports a yes, and \"No\" if it does not support a yes."
+   ],
+   "fmt": "Answer yes or no and nothing else.",
+   "n_shots": 0,
+   "dev_acc": 0.625,
+   "dev_ci": [
+    0.47032160054531913,
+    0.7577722646420829
+   ],
+   "dev_bits": "1101101100001001101111100011111110110101",
+   "culled_at": null
+  },
+  {
+   "id": "eb6dc08b",
+   "gen": 2,
+   "parents": [
+    "ecb00bf9"
+   ],
+   "operator": "swap_format",
+   "origin": "evolution",
+   "text": "Decide whether the passage supports a yes or a no. Your whole reply must be one word: yes or no.",
+   "sentences": [
+    "Decide whether the passage supports a yes or a no."
+   ],
+   "fmt": "Your whole reply must be one word: yes or no.",
+   "n_shots": 0,
+   "dev_acc": 0.55,
+   "dev_ci": [
+    0.39828829888440775,
+    0.6929492471905531
+   ],
+   "dev_bits": "1101001100001000111111100011011110010101",
+   "culled_at": 2
+  },
+  {
+   "id": "4864a845",
+   "gen": 2,
+   "parents": [
+    "3c242d83"
+   ],
+   "operator": "add_shot",
+   "origin": "evolution",
+   "text": "Write a response that clearly states \"Yes\" if the passage supports a yes, and \"No\" if it does not support a yes.\nExample: Passage: The group winners, Serbia, qualified directly for the 2018 FIFA World Cup. The...  =>  no",
+   "sentences": [
+    "Write a response that clearly states \"Yes\" if the passage supports a yes, and \"No\" if it does not support a yes."
+   ],
+   "fmt": "",
+   "n_shots": 1,
+   "dev_acc": 0.5,
+   "dev_ci": [
+    0.35199278797099753,
+    0.6480072120290025
+   ],
+   "dev_bits": "1101100100001001101111000001111110100001",
+   "culled_at": 2
+  },
+  {
+   "id": "16156b40",
+   "gen": 2,
+   "parents": [
+    "3c242d83"
+   ],
+   "operator": "llm_rewrite",
+   "origin": "evolution",
+   "text": "Write a response stating \"Yes\" if the passage supports a yes, and \"No\" if it does not support a yes.",
+   "sentences": [
+    "Write a response stating \"Yes\" if the passage supports a yes, and \"No\" if it does not support a yes."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.6,
+   "dev_ci": [
+    0.445956198273935,
+    0.7365188938759863
+   ],
+   "dev_bits": "1101101100001000111111000011111110110101",
+   "culled_at": 3
+  },
+  {
+   "id": "0b735999",
+   "gen": 3,
+   "parents": [
+    "33b36947"
+   ],
+   "operator": "add_clause",
+   "origin": "evolution",
+   "text": "Write a response that clearly states \"Yes\" if the passage supports a yes, and \"No\" if it does not support a yes. Do not use punctuation in your answer. Answer yes or no and nothing else.",
+   "sentences": [
+    "Write a response that clearly states \"Yes\" if the passage supports a yes, and \"No\" if it does not support a yes.",
+    "Do not use punctuation in your answer."
+   ],
+   "fmt": "Answer yes or no and nothing else.",
+   "n_shots": 0,
+   "dev_acc": 0.625,
+   "dev_ci": [
+    0.47032160054531913,
+    0.7577722646420829
+   ],
+   "dev_bits": "1101101000001111101111100011111110100101",
+   "culled_at": null
+  },
+  {
+   "id": "d8f51e68",
+   "gen": 3,
+   "parents": [
+    "3c242d83"
+   ],
+   "operator": "add_clause",
+   "origin": "evolution",
+   "text": "Focus on the key information. Write a response that clearly states \"Yes\" if the passage supports a yes, and \"No\" if it does not support a yes.",
+   "sentences": [
+    "Focus on the key information.",
+    "Write a response that clearly states \"Yes\" if the passage supports a yes, and \"No\" if it does not support a yes."
+   ],
+   "fmt": "",
+   "n_shots": 0,
+   "dev_acc": 0.55,
+   "dev_ci": [
+    0.39828829888440775,
+    0.6929492471905531
+   ],
+   "dev_bits": "1101101100001000111111000001011110110101",
+   "culled_at": 3
+  },
+  {
+   "id": "d496efa4",
+   "gen": 3,
+   "parents": [
+    "33b36947"
+   ],
+   "operator": "llm_rewrite",
+   "origin": "evolution",
+   "text": "Write a response stating \"Yes\" if the passage supports a yes, and \"No\" if it does not support a yes. Answer yes or no and nothing else.",
+   "sentences": [
+    "Write a response stating \"Yes\" if the passage supports a yes, and \"No\" if it does not support a yes."
+   ],
+   "fmt": "Answer yes or no and nothing else.",
+   "n_shots": 0,
+   "dev_acc": 0.65,
+   "dev_ci": [
+    0.4950559699353738,
+    0.7786566682895086
+   ],
+   "dev_bits": "1101101100001001111111100011111110110101",
+   "culled_at": null
+  },
+  {
+   "id": "00e3af26",
+   "gen": 3,
+   "parents": [
+    "33b36947"
+   ],
+   "operator": "add_shot",
+   "origin": "evolution",
+   "text": "Write a response that clearly states \"Yes\" if the passage supports a yes, and \"No\" if it does not support a yes. Answer yes or no and nothing else.\nExample: Passage: Kiester is a city in Faribault County, Minnesota, United States. The populatio...  =>  yes",
+   "sentences": [
+    "Write a response that clearly states \"Yes\" if the passage supports a yes, and \"No\" if it does not support a yes."
+   ],
+   "fmt": "Answer yes or no and nothing else.",
+   "n_shots": 1,
+   "dev_acc": 0.525,
+   "dev_ci": [
+    0.37497106853929735,
+    0.6706477044981831
+   ],
+   "dev_bits": "0010001111111000111010010101010011011010",
+   "culled_at": 3
+  }
+ ],
+ "generations": [
+  {
+   "gen": 0,
+   "born": [
+    "09e10dc3",
+    "6168fb74",
+    "6f19e9fc",
+    "ecb00bf9",
+    "297870fd",
+    "b28d798d"
+   ],
+   "survivors": [
+    "ecb00bf9",
+    "09e10dc3",
+    "b28d798d",
+    "297870fd"
+   ],
+   "best_dev": 0.55,
+   "mean_dev": 0.5125,
+   "evaluated_total": 6
+  },
+  {
+   "gen": 1,
+   "born": [
+    "3c242d83",
+    "96ae17fa",
+    "9dc98560",
+    "82cb59e0"
+   ],
+   "survivors": [
+    "3c242d83",
+    "82cb59e0",
+    "ecb00bf9",
+    "09e10dc3"
+   ],
+   "best_dev": 0.65,
+   "mean_dev": 0.5687500000000001,
+   "evaluated_total": 10
+  },
+  {
+   "gen": 2,
+   "born": [
+    "33b36947",
+    "eb6dc08b",
+    "4864a845",
+    "16156b40"
+   ],
+   "survivors": [
+    "3c242d83",
+    "33b36947",
+    "16156b40",
+    "82cb59e0"
+   ],
+   "best_dev": 0.65,
+   "mean_dev": 0.6125,
+   "evaluated_total": 14
+  },
+  {
+   "gen": 3,
+   "born": [
+    "0b735999",
+    "d8f51e68",
+    "d496efa4",
+    "00e3af26"
+   ],
+   "survivors": [
+    "3c242d83",
+    "d496efa4",
+    "33b36947",
+    "0b735999"
+   ],
+   "best_dev": 0.65,
+   "mean_dev": 0.6375,
+   "evaluated_total": 18
+  }
+ ],
+ "winner": "3c242d83",
+ "baseline": {
+  "nodes": [
+   {
+    "id": "2953b78a",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "If you are unsure, give your best guess. You are a helpful assistant. Your whole reply must be one word: yes or no.",
+    "sentences": [
+     "If you are unsure, give your best guess.",
+     "You are a helpful assistant."
+    ],
+    "fmt": "Your whole reply must be one word: yes or no.",
+    "n_shots": 0,
+    "dev_acc": 0.575,
+    "dev_ci": [
+     0.42194800436059987,
+     0.7149083147518411
+    ],
+    "dev_bits": "1101001100001000111111100011011110011101",
+    "culled_at": null
+   },
+   {
+    "id": "7f6201b0",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "Do not use punctuation in your answer. Answer the question about the passage. Your whole reply must be one word: yes or no.",
+    "sentences": [
+     "Do not use punctuation in your answer.",
+     "Answer the question about the passage."
+    ],
+    "fmt": "Your whole reply must be one word: yes or no.",
+    "n_shots": 0,
+    "dev_acc": 0.575,
+    "dev_ci": [
+     0.42194800436059987,
+     0.7149083147518411
+    ],
+    "dev_bits": "1101001101001000111111100011011110010101",
+    "culled_at": null
+   },
+   {
+    "id": "68595b02",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "Be precise. Answer the question about the passage. Do not explain your answer. Answer in as few words as possible.",
+    "sentences": [
+     "Be precise.",
+     "Answer the question about the passage.",
+     "Do not explain your answer.",
+     "Answer in as few words as possible."
+    ],
+    "fmt": "",
+    "n_shots": 0,
+    "dev_acc": 0.575,
+    "dev_ci": [
+     0.42194800436059987,
+     0.7149083147518411
+    ],
+    "dev_bits": "1101001101101000111111100001111011010001",
+    "culled_at": null
+   },
+   {
+    "id": "09cdf465",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "Explain the passage's stance on the matter.",
+    "sentences": [
+     "Explain the passage's stance on the matter."
+    ],
+    "fmt": "",
+    "n_shots": 0,
+    "dev_acc": 0.375,
+    "dev_ci": [
+     0.2422277353579172,
+     0.529678399454681
+    ],
+    "dev_bits": "1001000001011000011111000001110010000001",
+    "culled_at": null
+   },
+   {
+    "id": "a883b178",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "Answer the question based on the passage.\nExample: Passage: While deciding the Golaknath case in February 1967, Supreme Court ruled that t...  =>  yes",
+    "sentences": [
+     "Answer the question based on the passage."
+    ],
+    "fmt": "",
+    "n_shots": 1,
+    "dev_acc": 0.5,
+    "dev_ci": [
+     0.35199278797099753,
+     0.6480072120290025
+    ],
+    "dev_bits": "0010001111010000111111010001010011011001",
+    "culled_at": null
+   },
+   {
+    "id": "51c94d61",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "Answer the question about the passage. Read the question carefully.",
+    "sentences": [
+     "Answer the question about the passage.",
+     "Read the question carefully."
+    ],
+    "fmt": "",
+    "n_shots": 0,
+    "dev_acc": 0.45,
+    "dev_ci": [
+     0.30705075280944694,
+     0.6017117011155924
+    ],
+    "dev_bits": "1001001101101000111111000001110010000001",
+    "culled_at": null
+   },
+   {
+    "id": "6367f388",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "Decide whether the passage supports a yes or a no.\nExample: Passage: Nationals of Taiwan holding passports with National ID number can also apply f...  =>  yes",
+    "sentences": [
+     "Decide whether the passage supports a yes or a no."
+    ],
+    "fmt": "",
+    "n_shots": 1,
+    "dev_acc": 0.45,
+    "dev_ci": [
+     0.30705075280944694,
+     0.6017117011155924
+    ],
+    "dev_bits": "0010001111110000111110010001010001011000",
+    "culled_at": null
+   },
+   {
+    "id": "a14e09d7",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "Do not use punctuation in your answer. Read the passage and answer the question.\nExample: Passage: Canadian citizenship is typically obtained by birth in Canada on the principle...  =>  yes",
+    "sentences": [
+     "Do not use punctuation in your answer.",
+     "Read the passage and answer the question."
+    ],
+    "fmt": "",
+    "n_shots": 1,
+    "dev_acc": 0.575,
+    "dev_ci": [
+     0.42194800436059987,
+     0.7149083147518411
+    ],
+    "dev_bits": "1011001111111000111111010001010011011000",
+    "culled_at": null
+   },
+   {
+    "id": "5a8406be",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "Decide whether the passage supports a yes or a no. Do not use punctuation in your answer. Answer yes or no and nothing else.",
+    "sentences": [
+     "Decide whether the passage supports a yes or a no.",
+     "Do not use punctuation in your answer."
+    ],
+    "fmt": "Answer yes or no and nothing else.",
+    "n_shots": 0,
+    "dev_acc": 0.6,
+    "dev_ci": [
+     0.445956198273935,
+     0.7365188938759863
+    ],
+    "dev_bits": "1101101100001000111111100011111110010101",
+    "culled_at": null
+   },
+   {
+    "id": "ea536b57",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "Answer the question about the passage. Be concise.",
+    "sentences": [
+     "Answer the question about the passage.",
+     "Be concise."
+    ],
+    "fmt": "",
+    "n_shots": 0,
+    "dev_acc": 0.575,
+    "dev_ci": [
+     0.42194800436059987,
+     0.7149083147518411
+    ],
+    "dev_bits": "1101001101101000111111100001111011010001",
+    "culled_at": null
+   },
+   {
+    "id": "02716aee",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "I am an assistance tool.\nExample: Passage: The game sold over 3 million copies in three days after its release, making it...  =>  yes",
+    "sentences": [
+     "I am an assistance tool."
+    ],
+    "fmt": "",
+    "n_shots": 1,
+    "dev_acc": 0.525,
+    "dev_ci": [
+     0.37497106853929735,
+     0.6706477044981831
+    ],
+    "dev_bits": "1101001101011000111111010001010011010001",
+    "culled_at": null
+   },
+   {
+    "id": "9dc98560",
+    "gen": 1,
+    "parents": [],
+    "operator": "random",
+    "origin": "random",
+    "text": "Provide answers based on the details provided in the passage.",
+    "sentences": [
+     "Provide answers based on the details provided in the passage."
+    ],
+    "fmt": "",
+    "n_shots": 0,
+    "dev_acc": 0.5,
+    "dev_ci": [
+     0.35199278797099753,
+     0.6480072120290025
+    ],
+    "dev_bits": "1101001101001000111111000001110011010001",
+    "culled_at": null
+   }
+  ],
+  "winner": "5a8406be",
+  "budget": 12
+ },
+ "operator_stats": [
+  {
+   "operator": "llm_rewrite",
+   "n": 4,
+   "improved": 2,
+   "survived": 3,
+   "mean_delta": 0.01874999999999999
+  },
+  {
+   "operator": "crossover",
+   "n": 2,
+   "improved": 0,
+   "survived": 1,
+   "mean_delta": -0.012500000000000011
+  },
+  {
+   "operator": "swap_format",
+   "n": 2,
+   "improved": 1,
+   "survived": 1,
+   "mean_delta": 0.012499999999999956
+  },
+  {
+   "operator": "add_shot",
+   "n": 2,
+   "improved": 0,
+   "survived": 0,
+   "mean_delta": -0.125
+  },
+  {
+   "operator": "add_clause",
+   "n": 2,
+   "improved": 0,
+   "survived": 1,
+   "mean_delta": -0.04999999999999999
+  }
+ ],
+ "report": {
+  "n_test": 100,
+  "majority_rate": 0.67,
+  "arms": {
+   "seed0": {
+    "label": "seed0",
+    "id": "09e10dc3",
+    "dev_acc": 0.5,
+    "test_acc": 0.66,
+    "test_ci": [
+     0.57,
+     0.75
+    ],
+    "gap": -0.16000000000000003,
+    "test_bits": "1111111001110111011010111101100011000100110101111011001110001011010010110011111011011011111111111101",
+    "text": "You are a helpful assistant."
+   },
+   "best_seed": {
+    "label": "best_seed",
+    "id": "ecb00bf9",
+    "dev_acc": 0.55,
+    "test_acc": 0.71,
+    "test_ci": [
+     0.62,
+     0.8
+    ],
+    "gap": -0.15999999999999992,
+    "test_bits": "1111110001110111111110111100100101010100111111111011111110010010011111111100111011011111101101111100",
+    "text": "Decide whether the passage supports a yes or a no."
+   },
+   "evolved": {
+    "label": "evolved",
+    "id": "3c242d83",
+    "dev_acc": 0.65,
+    "test_acc": 0.7,
+    "test_ci": [
+     0.61,
+     0.79
+    ],
+    "gap": -0.04999999999999993,
+    "test_bits": "1110110001110111111100111101100101110110110110111011111110010011011111111100111011011110101101111100",
+    "text": "Write a response that clearly states \"Yes\" if the passage supports a yes, and \"No\" if it does not support a yes."
+   },
+   "random": {
+    "label": "random",
+    "id": "5a8406be",
+    "dev_acc": 0.6,
+    "test_acc": 0.69,
+    "test_ci": [
+     0.6,
+     0.78
+    ],
+    "gap": -0.08999999999999997,
+    "test_bits": "0110110001010111111100111101100101110110110110111011111110010011011111111100111111011110101101111100",
+    "text": "Decide whether the passage supports a yes or a no. Do not use punctuation in your answer. Answer yes or no and nothing else."
+   }
+  },
+  "comparisons": {
+   "evolved_vs_seed0": {
+    "diff": 0.04,
+    "lo": -0.06,
+    "hi": 0.14,
+    "p_boot": 0.503,
+    "a_only": 16,
+    "b_only": 12,
+    "p_mcnemar": 0.5715881884098053
+   },
+   "evolved_vs_best_seed": {
+    "diff": -0.01,
+    "lo": -0.07,
+    "hi": 0.05,
+    "p_boot": 0.885,
+    "a_only": 4,
+    "b_only": 5,
+    "p_mcnemar": 1.0
+   },
+   "evolved_vs_random": {
+    "diff": 0.01,
+    "lo": -0.02,
+    "hi": 0.05,
+    "p_boot": 0.7836,
+    "a_only": 2,
+    "b_only": 1,
+    "p_mcnemar": 1.0
+   }
+  }
+ },
+ "calls": {
+  "model_calls": 1570,
+  "cache_hits": 42
+ },
+ "seconds": 2116.3
+}

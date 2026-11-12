@@ -1,6 +1,18 @@
 {
  "runs": [
   {
+   "file": "csqa-s0.json",
+   "task": "CommonsenseQA",
+   "name": "csqa",
+   "model": "Qwen/Qwen2.5-0.5B-Instruct"
+  },
+  {
+   "file": "boolq-s0.json",
+   "task": "BoolQ",
+   "name": "boolq",
+   "model": "Qwen/Qwen2.5-0.5B-Instruct"
+  },
+  {
    "file": "synthetic-s0.json",
    "task": "Synthetic transforms",
    "name": "synthetic",
