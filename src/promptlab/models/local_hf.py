@@ -35,7 +35,7 @@ class LocalHFBackend:
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
         self.model = model
-        self.batch_size = batch_size
+        self.batch_size = self.max_batch = batch_size
         self._torch = torch
         self._tok = AutoTokenizer.from_pretrained(model)
         self._tok.padding_side = "left"
@@ -59,6 +59,7 @@ class LocalHFBackend:
         ]
         order = sorted(range(len(texts)), key=lambda i: len(texts[i]))
         out = [""] * len(texts)
+        self.batch_size = self.max_batch  # an earlier out-of-memory retry only shrinks batches temporarily
         s = 0
         while s < len(order):
             ids = order[s : s + self.batch_size]
