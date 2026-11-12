@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PromptLab</title>
+<meta name="description" content="Evolutionary prompt optimisation: mutate, score on a dev split, select, and report once on a held-out test split.">
+<meta name="theme-color" content="#07070a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2307070a'/%3E%3Ccircle cx='9' cy='20' r='3' fill='%23d7ff3f'/%3E%3Ccircle cx='16' cy='13' r='3' fill='%23d7ff3f'/%3E%3Ccircle cx='23' cy='8' r='3.6' fill='%23d7ff3f'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=Instrument+Serif:ital@1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand mono" href="#top">PROMPTLAB</a>
+  <span class="pill mono" id="modePill">Recorded run</span>
+  <nav class="mono">
+    <a href="#results">Held-out</a>
+    <a href="#operators">Operators</a>
+    <a href="#notes">Notes</a>
+  </nav>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <p class="eyebrow mono">Prompt engineering as optimisation &middot; mutate &rarr; score &rarr; select</p>
+    <h1>Prompts, <em>evolved</em> against a score.</h1>
+    <p class="lede">A population of prompt variants is mutated, scored on a dev split, and culled. The winner is then
+      tested once on data the search never saw. Everything below is a real run of this code on a small local model, replayed.</p>
+  </section>
+
+  <section id="lab" aria-label="Evolution viewer">
+    <div class="tabs" id="runTabs" role="tablist" aria-label="Task"></div>
+    <p class="runmeta mono" id="runMeta"></p>
+
+    <div class="stage-grid">
+      <div class="panel stage">
+        <div class="stage-head">
+          <span class="caption mono" id="caption">Loading run</span>
+          <span class="legend mono">
+            <i class="lg fresh"></i>scored <i class="lg keep"></i>survivor <i class="lg cull"></i>culled
+          </span>
+        </div>
+        <div class="graph-scroll" id="graphScroll"><svg id="graph" role="img" aria-label="Lineage graph: one column per generation"></svg></div>
+        <div class="controls">
+          <button class="btn icon" id="btnPlay" aria-label="Play">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path id="playIcon" d="M8 5v14l11-7z" fill="currentColor"/></svg>
+          </button>
+          <button class="btn icon" id="btnPrev" aria-label="Previous step"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+          <button class="btn icon" id="btnNext" aria-label="Next step"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+          <input type="range" id="scrub" min="0" max="1" value="0" step="1" aria-label="Timeline">
+          <button class="btn mono" id="btnSpeed" aria-label="Playback speed">1x</button>
+        </div>
+      </div>
+
+      <aside class="panel detail" id="detail" aria-live="polite">
+        <div class="sheet-bar"><span class="handle"></span><button class="btn icon close" id="btnClose" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" fill="none"/></svg></button></div>
+        <div id="detailBody"></div>
+      </aside>
+    </div>
+    <div class="scrim" id="scrim"></div>
+  </section>
+
+  <section class="panel curve" aria-label="Score curve">
+    <div class="sec-head"><h2>Best score per generation</h2>
+      <p class="mono muted">Dev (search) vs held-out test. The gap between the two is what selection overfits.</p></div>
+    <svg id="curve" role="img" aria-label="Best dev score per generation, with held-out test markers"></svg>
+  </section>
+
+  <section class="panel" id="results" aria-label="Held-out results">
+    <div class="sec-head"><h2>Held-out test, touched once</h2>
+      <p class="mono muted" id="resultsSub"></p></div>
+    <div class="table-wrap"><table class="results" id="armsTable"></table></div>
+    <div id="verdicts" class="verdicts"></div>
+  </section>
+
+  <section class="panel" id="operators" aria-label="Operator statistics">
+    <div class="sec-head"><h2>Which mutations paid off</h2>
+      <p class="mono muted">A mutation counts as improved if the child scored higher on dev than its best parent.</p></div>
+    <div id="opsList" class="ops"></div>
+  </section>
+
+  <section class="panel live" id="live" hidden aria-label="Live run">
+    <div class="sec-head"><h2>Run it live</h2>
+      <p class="mono muted">Only available when the app is served by the local FastAPI server.</p></div>
+    <form id="liveForm" class="liveform">
+      <label class="mono">Task
+        <select id="liveTask"><option value="synthetic">Synthetic</option><option value="csqa">CommonsenseQA</option><option value="boolq">BoolQ</option></select></label>
+      <label class="mono">Backend
+        <select id="liveBackend"><option value="fake">fake (scripted, instant)</option><option value="local">local model (slow)</option></select></label>
+      <label class="mono">Seed <input id="liveSeed" type="number" value="0" min="0" max="999"></label>
+      <button class="btn primary mono" type="submit" id="liveGo">Start</button>
+    </form>
+    <p class="mono muted" id="liveStatus"></p>
+  </section>
+
+  <section class="notes" id="notes">
+    <h2>Read this before trusting a number</h2>
+    <ul>
+      <li><b>Much of the gain is output-format control.</b> A 0.5B model often knows the answer but replies in a shape the scorer rejects. Telling it to reply with only the answer is worth many points; that is a real effect, but it is not reasoning.</li>
+      <li><b>Dev sets are small and noisy.</b> A few dozen items means a standard error of several points, so some "improvements" during search are luck. That is why the winner is re-scored on a separate test split.</li>
+      <li><b>The test split is touched once</b>, after the search is finished. Dev minus test accuracy of the winner is the winner's-curse gap.</li>
+      <li><b>Random search at equal budget</b> is the fair baseline. If evolution does not beat it, selection is not adding anything.</li>
+      <li>One seed per task, one small model. Confidence intervals are shown; a result that is not significant is reported as it is.</li>
+    </ul>
+  </section>
+</main>
+
+<footer class="foot mono">
+  <span>Built by <a href="https://adityajain16.vercel.app">Aditya Jain</a></span>
+  <a href="https://github.com/Aditya2616/PromptLab">github.com/Aditya2616/PromptLab</a>
+</footer>
+<script type="module" src="app.js"></script>
+</body>
+</html>
