@@ -53,7 +53,7 @@ _LOCK = threading.Lock()
 
 def _worker(run_id: str, req: LiveRequest) -> None:
     from .evolve import EvoConfig
-    from .models import CachedBackend, make_backend
+    from .models import CachedBackend, cache_path, make_backend
     from .pipeline import run_experiment
     from .tasks import load_task
 
@@ -63,7 +63,7 @@ def _worker(run_id: str, req: LiveRequest) -> None:
         raw = make_backend(req.backend)
         if hasattr(raw, "bind"):
             raw.bind(task)
-        backend = CachedBackend(raw, CACHE / f"{raw.name}-{raw.model.replace('/', '_')}.sqlite")
+        backend = CachedBackend(raw, cache_path(CACHE, raw))
         cfg = EvoConfig(req.generations, req.pop, req.children, req.seed)
 
         def push(state: dict) -> None:

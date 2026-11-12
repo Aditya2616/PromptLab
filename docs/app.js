@@ -67,7 +67,7 @@ function loadRun(run, { fresh = false } = {}) {
   const t = run.task, g = run.git || {};
   $('#runMeta').textContent = (run.recorded === false || S.live)
     ? `LIVE RUN · ${run.model} · backend ${run.backend} · seed ${run.seed}`
-    : `RECORDED RUN · ${run.model} · backend ${run.backend} · seed ${run.seed} · commit ${g.commit || 'n/a'}${g.dirty ? '+dirty' : ''} · ` +
+    : `RECORDED RUN · ${run.model} · backend ${run.backend}${run.device ? ` (${run.device}/${run.dtype})` : } · seed ${run.seed} · commit ${g.commit || 'n/a'}${g.dirty ? '+dirty' : ''} · ` +
       `${t.n_dev} dev / ${t.n_test} test items · ${run.calls?.model_calls ?? '?'} model calls · ${Math.round((run.seconds || 0) / 60)} min · data: ${t.source}`;
   buildGraph();
   renderCurve();

@@ -10,9 +10,11 @@ from pathlib import Path
 from .base import ChatBackend, ChatRequest
 
 
-def request_key(backend: str, model: str, req: ChatRequest) -> str:
+def request_key(backend: str, model: str, req: ChatRequest, variant: str = "") -> str:
+    """Cache key. ``variant`` (device and dtype for local models) keeps outputs from different
+    numerics apart, so one run never mixes CPU float32 and GPU float16 completions."""
     payload = json.dumps(
-        [backend, model, req.messages, req.max_tokens, req.temperature],
+        [backend, model, req.messages, req.max_tokens, req.temperature, variant],
         sort_keys=True,
         ensure_ascii=False,
     )
@@ -30,6 +32,7 @@ class CachedBackend:
         self.inner = inner
         self.name = inner.name
         self.model = inner.model
+        self.variant = getattr(inner, "variant", "")
         self._lock = threading.Lock()
         if str(path) != ":memory:":
             Path(path).parent.mkdir(parents=True, exist_ok=True)
@@ -40,7 +43,7 @@ class CachedBackend:
         self.misses = 0
 
     def complete(self, requests: Sequence[ChatRequest]) -> list[str]:
-        keys = [request_key(self.name, self.model, r) for r in requests]
+        keys = [request_key(self.name, self.model, r, self.variant) for r in requests]
         out: list[str | None] = [None] * len(requests)
         todo: dict[str, list[int]] = {}
         with self._lock:
@@ -69,3 +72,9 @@ class CachedBackend:
 
     def close(self) -> None:
         self._db.close()
+
+
+def cache_path(directory: str | Path, backend: ChatBackend) -> Path:
+    """One cache file per backend, model and (for local models) device and dtype."""
+    tag = "-".join(x for x in (backend.name, backend.model.replace("/", "_"), getattr(backend, "variant", "")) if x)
+    return Path(directory) / f"{tag}.sqlite"

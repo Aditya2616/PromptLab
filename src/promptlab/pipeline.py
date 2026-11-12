@@ -52,6 +52,7 @@ def run_experiment(
     result = build_run_json(
         task, backend.name, backend.model, cfg, evo, cands, rand_best, rep,
         backend.stats(), time.time() - t0, git_info(),
+        device=getattr(backend.inner, "device", "n/a"), dtype=getattr(backend.inner, "dtype", "n/a"),
     )
     if out:
         write_json(result, out)

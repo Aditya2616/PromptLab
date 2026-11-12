@@ -112,6 +112,8 @@ def build_run_json(
     calls: dict,
     seconds: float,
     git: dict | None = None,
+    device: str = "n/a",
+    dtype: str = "n/a",
 ) -> dict:
     winner = evo.best()
     return {
@@ -122,6 +124,8 @@ def build_run_json(
         "git": git or git_info(),
         "backend": backend_name,
         "model": model,
+        "device": device,
+        "dtype": dtype,
         "seed": cfg.seed,
         "config": asdict(cfg),
         "task": {

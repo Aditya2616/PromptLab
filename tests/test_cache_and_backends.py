@@ -59,3 +59,21 @@ def test_openai_backend_with_stub_transport():
     assert out == ["ok:one", "ok:two"]
     assert all(u.endswith("/chat/completions") for u, _ in seen)
     assert {s[1]["max_tokens"] for s in seen} == {5, 16}
+
+
+def test_cache_key_separates_device_and_dtype(tmp_path):
+    from promptlab.models import CachedBackend, ChatRequest, cache_path
+    from promptlab.models.fake import ScriptedBackend
+
+    class Cpu(ScriptedBackend):
+        variant = "cpu-float32"
+
+    class Gpu(ScriptedBackend):
+        variant = "cuda-float16"
+
+    req = ChatRequest([{"role": "user", "content": "hi"}])
+    a, b = Cpu(lambda r: "cpu"), Gpu(lambda r: "gpu")
+    path = tmp_path / "shared.sqlite"
+    assert CachedBackend(a, path).complete([req]) == ["cpu"]
+    assert CachedBackend(b, path).complete([req]) == ["gpu"]  # same file, no cross-device hit
+    assert cache_path(tmp_path, a).name != cache_path(tmp_path, b).name

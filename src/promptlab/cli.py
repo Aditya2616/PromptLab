@@ -27,15 +27,15 @@ def cmd_download(args: argparse.Namespace) -> int:
 def cmd_run(args: argparse.Namespace) -> int:
     _setup_threads()
     from .evolve import EvoConfig
-    from .models import CachedBackend, make_backend
+    from .models import CachedBackend, cache_path, make_backend
     from .pipeline import run_experiment
     from .tasks import load_task
 
     task = load_task(args.task, dev_n=args.dev_n, test_n=args.test_n)
-    raw = make_backend(args.backend, args.model)
+    raw = make_backend(args.backend, args.model, device=args.device, dtype=args.dtype)
     if hasattr(raw, "bind"):
         raw.bind(task)
-    backend = CachedBackend(raw, Path(args.cache) / f"{raw.name}-{raw.model.replace('/', '_')}.sqlite")
+    backend = CachedBackend(raw, cache_path(args.cache, raw))
     cfg = EvoConfig(
         generations=args.generations, pop=args.pop, children=args.children, seed=args.seed,
         selection=args.selection,
@@ -46,6 +46,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     for k, a in rep.items():
         print(f"{k:10s} dev={a['dev_acc']:.3f} test={a['test_acc']:.3f} "
               f"[{a['test_ci'][0]:.3f}, {a['test_ci'][1]:.3f}]")
+    print(f"device {res['device']} / {res['dtype']}")
     print(f"wrote {out}  ({res['calls']['model_calls']} model calls, {res['seconds']}s)")
     return 0
 
@@ -87,6 +88,8 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--task", default="synthetic", choices=["csqa", "boolq", "synthetic"])
     r.add_argument("--backend", default=None, help="local | openai | fake (default: $PROMPTLAB_BACKEND or local)")
     r.add_argument("--model", default=None)
+    r.add_argument("--device", default=None, help="local backend: cuda or cpu (default: cuda if available, or $PROMPTLAB_DEVICE)")
+    r.add_argument("--dtype", default=None, help="local backend: float16 or float32 (default: float16 on cuda, else float32)")
     r.add_argument("--seed", type=int, default=0)
     r.add_argument("--generations", type=int, default=4)
     r.add_argument("--pop", type=int, default=5)

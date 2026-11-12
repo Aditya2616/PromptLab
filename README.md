@@ -22,7 +22,7 @@ I built this to measure prompt search honestly, so the caveats come first.
 
 ## Results (real runs, reproduce with `python scripts/run_experiments.py`)
 
-Model Qwen2.5-0.5B-Instruct, greedy decoding, CPU, seed 0, 3 generations, population 4, 4 children per generation, 40 dev items, 100 test items. Every model call is cached in SQLite. The stored outputs are in `results/*.json`; each run was made at commit `530c703` with a clean tree and took 35 to 45 minutes. Test accuracy with 95% bootstrap CI (10,000 resamples).
+Model Qwen2.5-0.5B-Instruct, greedy decoding, CPU float32 (recorded as `device`/`dtype` in each `results/*.json`), seed 0, 3 generations, population 4, 4 children per generation, 40 dev items, 100 test items. Every model call is cached in SQLite. The stored outputs are in `results/*.json`; each run was made at commit `530c703` with a clean tree and took 35 to 45 minutes. Test accuracy with 95% bootstrap CI (10,000 resamples).
 
 | Task | First-draft seed | Best seed (picked on dev) | Random search, same budget | Evolved winner (dev / test) |
 |---|---|---|---|---|
@@ -89,7 +89,7 @@ The `fake` backend is a deterministic simulator for tests and a quick look at th
 
 ## Backends: what was really exercised
 
-- **Local transformers (Qwen2.5-0.5B-Instruct): used for every recorded result.**
+- **Local transformers (Qwen2.5-0.5B-Instruct): used for every recorded result, on CPU in float32.** The backend picks CUDA with float16 automatically when a GPU is available (override with `--device`/`--dtype` or `PROMPTLAB_DEVICE`/`PROMPTLAB_DTYPE`). Device and dtype are part of the cache key and the cache file name, so a run never mixes completions from different numerics; I did not re-run the tables on a GPU, so the GPU path is only smoke-tested.
 - **OpenAI-compatible client: adapter code, tested only against a stub HTTP transport** (`httpx.MockTransport`). I did not call a hosted API. Set `PROMPTLAB_BACKEND=openai`, `OPENAI_API_KEY` and `OPENAI_BASE_URL` (see `.env.example`); a local llama.cpp, vLLM or Ollama server works as the base URL.
 
 ## Limitations

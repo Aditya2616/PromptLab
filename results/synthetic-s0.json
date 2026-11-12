@@ -9,6 +9,8 @@
  },
  "backend": "local",
  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+ "device": "cpu",
+ "dtype": "float32",
  "seed": 0,
  "config": {
   "generations": 3,

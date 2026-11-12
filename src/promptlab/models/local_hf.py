@@ -16,12 +16,22 @@ class LocalHFBackend:
 
     name = "local"
 
-    def __init__(self, model: str = "Qwen/Qwen2.5-0.5B-Instruct", batch_size: int = 16) -> None:
+    def __init__(
+        self,
+        model: str = "Qwen/Qwen2.5-0.5B-Instruct",
+        batch_size: int = 16,
+        device: str | None = None,
+        dtype: str | None = None,
+    ) -> None:
         n = default_threads()
         os.environ.setdefault("OMP_NUM_THREADS", str(n))
         import torch
 
         torch.set_num_threads(n)
+        device = device or os.environ.get("PROMPTLAB_DEVICE") or ("cuda" if torch.cuda.is_available() else "cpu")
+        dtype = dtype or os.environ.get("PROMPTLAB_DTYPE") or ("float16" if device.startswith("cuda") else "float32")
+        self.device, self.dtype = device, dtype
+        self.variant = f"{device}-{dtype}"
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
         self.model = model
@@ -31,7 +41,7 @@ class LocalHFBackend:
         self._tok.padding_side = "left"
         if self._tok.pad_token is None:
             self._tok.pad_token = self._tok.eos_token
-        self._lm = AutoModelForCausalLM.from_pretrained(model, dtype=torch.float32).eval()
+        self._lm = AutoModelForCausalLM.from_pretrained(model, dtype=getattr(torch, dtype)).eval().to(device)
 
     def complete(self, requests: Sequence[ChatRequest]) -> list[str]:
         texts = [
@@ -42,14 +52,14 @@ class LocalHFBackend:
         out = [""] * len(texts)
         for s in range(0, len(order), self.batch_size):
             ids = order[s : s + self.batch_size]
-            batch = self._tok([texts[i] for i in ids], return_tensors="pt", padding=True)
+            batch = self._tok([texts[i] for i in ids], return_tensors="pt", padding=True).to(self.device)
             new = max(requests[i].max_tokens for i in ids)
             with self._torch.no_grad():
                 gen = self._lm.generate(
                     **batch, max_new_tokens=new, do_sample=False, pad_token_id=self._tok.pad_token_id
                 )
             width = batch["input_ids"].shape[1]
-            dec = self._tok.batch_decode(gen[:, width:], skip_special_tokens=True)
+            dec = self._tok.batch_decode(gen[:, width:].cpu(), skip_special_tokens=True)
             for i, d in zip(ids, dec, strict=True):
                 out[i] = d
         return out
