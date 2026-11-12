@@ -313,7 +313,7 @@ function renderCurve() {
   gens.forEach((g) => S.cv.pts.push(el('circle', { class: 'curve-pt', cx: X(g.gen), cy: Y(g.best_dev), r: 4.5 }, svg)));
   S.cv.test = [];
   if (arms) {
-    const x0 = CV.W - CV.r + (narrow ? 22 : 50), sp = narrow ? 34 : 40;
+    const x0 = CV.W - CV.r + (narrow ? 22 : 52), sp = narrow ? 34 : 54;
     el('text', { class: 'col-label', x: x0 + sp, y: 12, 'text-anchor': 'middle' }, svg).textContent = narrow ? 'TEST' : 'HELD-OUT TEST';
     const order = narrow ? [['seed0', 'seed'], ['random', 'rand'], ['evolved', 'evo']] : [['seed0', 'seed 0'], ['random', 'random'], ['evolved', 'evolved']];
     order.forEach(([k, label], i) => {

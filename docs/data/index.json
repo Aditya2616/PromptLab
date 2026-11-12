@@ -1,0 +1,10 @@
+{
+ "runs": [
+  {
+   "file": "synthetic-s0.json",
+   "task": "Synthetic transforms",
+   "name": "synthetic",
+   "model": "Qwen/Qwen2.5-0.5B-Instruct"
+  }
+ ]
+}

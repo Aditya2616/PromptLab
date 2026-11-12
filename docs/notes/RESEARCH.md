@@ -1,4 +1,4 @@
-# PromptLab research notes
+# PromptLab research notes (written before building)
 
 ## 1. The field
 
@@ -20,8 +20,8 @@ Related: a grammar-guided evolutionary paper ([2507.10326](https://arxiv.org/abs
 - A 0.5B model is a weak rewriter. LLM rewrites will often be degenerate, so the mutator is guarded (length limit, must differ, non-empty, deduplicated) and cheap deterministic operators carry real weight.
 - Dev sets of 100-200 items are noisy (SE about 3.5 points at 50% accuracy). Selection on them overfits, so the final report uses a separate test split, bootstrap CIs and a paired significance test.
 
-## 2. Practical constraints measured here
-- 12 logical cores, CPU torch 2.11, transformers 5.7, numpy 2.4, openai 2.33. `datasets` is not installed; data is fetched as parquet with `huggingface_hub` and read with pandas.
+## 2. Practical constraints I measured
+- CPU-only torch 2.11, transformers 5.7, numpy 2.4, openai 2.33. I do not use `datasets`; data is fetched as parquet with `huggingface_hub` and read with pandas.
 - Qwen2.5-0.5B-Instruct (fp32, batch 16, 6 new tokens): about 0.22 s per example (about 11 s per 48 items). A 150-item dev evaluation is about 35 s per uncached variant; a 6-generation run with 8 children per generation is roughly 30 min. The cache makes reruns near-instant.
 
 ## 3. Models (download budget 3 GB)
