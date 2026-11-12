@@ -28,7 +28,7 @@ def git_info(cwd: Path | None = None) -> dict:
         except (OSError, subprocess.SubprocessError):
             return ""
 
-    return {"commit": run("rev-parse", "--short", "HEAD") or None, "dirty": bool(run("status", "--porcelain"))}
+    return {"commit": run("rev-parse", "--short", "HEAD") or None, "dirty": bool(run("status", "--porcelain", "--untracked-files=no"))}
 
 
 def operator_stats(evo: EvoResult) -> list[dict]:
