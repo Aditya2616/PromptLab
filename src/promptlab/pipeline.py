@@ -8,7 +8,9 @@ from pathlib import Path
 
 from .baselines import random_search
 from .evolve import EvoConfig, EvoResult, node_to_dict, run_evolution
+from .models.base import ChatBackend
 from .models.cache import CachedBackend
+from .models.counting import CountingBackend
 from .report import build_run_json, final_report, git_info, write_json
 from .tasks.base import Task
 
@@ -36,8 +38,15 @@ def run_experiment(
     out: str | Path | None = None,
     state_path: str | Path | None = None,
     on_state: Callable[[dict], None] | None = None,
+    mutator: ChatBackend | None = None,
+    alt_mutator: ChatBackend | None = None,
+    analysis_n: int = 250,
 ) -> dict:
+    """Evolve, run the equal-budget random baseline, optionally evolve again with a stronger
+    mutator, then score the winners on test. ``mutator`` defaults to the task model."""
     t0 = time.time()
+    stats0 = backend.stats()
+    mut = CountingBackend(mutator or backend)
 
     def emit(evo: EvoResult) -> None:
         st = partial_state(task, backend.name, backend.model, cfg, evo)
@@ -46,13 +55,31 @@ def run_experiment(
         if on_state:
             on_state(st)
 
-    evo = run_evolution(task, backend, cfg, on_generation=emit)
-    cands, rand_best = random_search(task, backend, cfg, evo)
-    rep = final_report(task, backend, evo, rand_best)
+    evo = run_evolution(task, backend, cfg, on_generation=emit, mutator=mut)
+    evo_mut_calls = mut.calls
+    cands, rand_best = random_search(task, backend, cfg, evo, mutator=mut)
+    rand_mut_calls = mut.calls - evo_mut_calls
+    alt = alt_info = None
+    if alt_mutator is not None:
+        alt_mut = CountingBackend(alt_mutator)
+        alt = run_evolution(task, backend, cfg, mutator=alt_mut)
+        alt_info = {
+            "mutator_model": alt_mutator.model, "mutator_calls": alt_mut.calls, "winner": alt.best().id,
+            "nodes": [node_to_dict(task, n) for n in alt.nodes.values()],
+            "generations": alt.generations,
+        }
+    rep = final_report(task, backend, evo, rand_best, alt=alt, analysis_n=analysis_n)
     result = build_run_json(
         task, backend.name, backend.model, cfg, evo, cands, rand_best, rep,
-        backend.stats(), time.time() - t0, git_info(),
+        {k: v - stats0[k] for k, v in backend.stats().items()}, time.time() - t0, git_info(),
         device=getattr(backend.inner, "device", "n/a"), dtype=getattr(backend.inner, "dtype", "n/a"),
+        mutator={
+            "model": (mutator or backend).model, "evolution_calls": evo_mut_calls,
+            "random_calls": rand_mut_calls,
+            "dev_evaluations": {"evolution": evo.evaluated - sum(n.origin == "seed" for n in evo.nodes.values()),
+                                "random": len(cands)},
+        },
+        alt=alt_info,
     )
     if out:
         write_json(result, out)

@@ -97,3 +97,20 @@ def test_sim_backend_is_deterministic(task):
 
     r = ChatRequest(task.messages(task.seeds()[0], task.dev[0]))
     assert a.complete([r]) == b.complete([r])
+
+
+def test_pipeline_reports_equal_budget_alt_mutator_and_operator_heldout(task, backend, tmp_path):
+    from promptlab.models.fake import ScriptedBackend
+
+    alt = ScriptedBackend(lambda r: "Reply with only the answer, nothing else.")
+    r = run_experiment(task, backend, CFG, mutator=ScriptedBackend(lambda r: "Be concise."), alt_mutator=alt,
+                       analysis_n=20)
+    ev = r["mutator"]["dev_evaluations"]
+    assert ev["evolution"] == ev["random"] == r["baseline"]["budget"]
+    assert r["alt"]["mutator_calls"] > 0 and r["alt"]["winner"] in {n["id"] for n in r["alt"]["nodes"]}
+    assert "evolved_alt" in r["report"]["arms"] and "evolved_alt_vs_random" in r["report"]["comparisons"]
+    oh = r["report"]["operators_heldout"]
+    assert oh["n_test_used"] == 20 and oh["main"] and oh["alt"]
+    for row in oh["main"]:
+        assert row["beat_parent_dev"] <= row["children"]
+        assert (row["mean_test_gain"] is None) == (row["beat_parent_dev"] == 0)

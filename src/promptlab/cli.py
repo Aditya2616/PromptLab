@@ -32,16 +32,23 @@ def cmd_run(args: argparse.Namespace) -> int:
     from .tasks import load_task
 
     task = load_task(args.task, dev_n=args.dev_n, test_n=args.test_n)
-    raw = make_backend(args.backend, args.model, device=args.device, dtype=args.dtype)
-    if hasattr(raw, "bind"):
-        raw.bind(task)
-    backend = CachedBackend(raw, cache_path(args.cache, raw))
+
+    def cached(model: str | None) -> CachedBackend:
+        raw = make_backend(args.backend, model, device=args.device, dtype=args.dtype)
+        if hasattr(raw, "bind"):
+            raw.bind(task)
+        return CachedBackend(raw, cache_path(args.cache, raw))
+
+    backend = cached(args.model)
+    mutator = cached(args.mutator_model) if args.mutator_model else None
+    alt = cached(args.alt_mutator_model) if args.alt_mutator_model else None
     cfg = EvoConfig(
         generations=args.generations, pop=args.pop, children=args.children, seed=args.seed,
         selection=args.selection,
     )
     out = Path(args.out) / f"{args.task}-s{args.seed}.json"
-    res = run_experiment(task, backend, cfg, out=out, state_path=Path(args.cache) / f"{args.task}-state.json")
+    res = run_experiment(task, backend, cfg, out=out, state_path=Path(args.cache) / f"{args.task}-state.json",
+                         mutator=mutator, alt_mutator=alt, analysis_n=args.analysis_n)
     rep = res["report"]["arms"]
     for k, a in rep.items():
         print(f"{k:10s} dev={a['dev_acc']:.3f} test={a['test_acc']:.3f} "
@@ -96,6 +103,9 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--children", type=int, default=6)
     r.add_argument("--dev-n", type=int, default=80)
     r.add_argument("--test-n", type=int, default=200)
+    r.add_argument("--mutator-model", default=None, help="model for the LLM mutation operators (default: the task model)")
+    r.add_argument("--alt-mutator-model", default=None, help="also evolve with this stronger mutator and report it as a separate arm")
+    r.add_argument("--analysis-n", type=int, default=250, help="test items used for the per-operator held-out diagnostic")
     r.add_argument("--selection", default="tournament", choices=["tournament", "pareto"])
     r.add_argument("--out", default="results")
     r.add_argument("--cache", default="runs")

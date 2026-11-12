@@ -13,7 +13,7 @@ from .tasks.base import Task
 
 
 def random_search(
-    task: Task, backend: ChatBackend, cfg: EvoConfig, evo: EvoResult
+    task: Task, backend: ChatBackend, cfg: EvoConfig, evo: EvoResult, mutator: ChatBackend | None = None
 ) -> tuple[list[Node], Node]:
     """Score the same seeds, then ``budget`` random multi-step mutants of random seeds.
 
@@ -23,7 +23,7 @@ def random_search(
     """
     task.lock_test()
     rng = np.random.default_rng(cfg.seed + 10_000)
-    ctx = OpContext(task, backend, rng, cfg.max_words)
+    ctx = OpContext(task, mutator or backend, rng, cfg.max_words)
     seed_nodes = [n for n in evo.nodes.values() if n.origin == "seed"]
     budget = max(0, evo.evaluated - len(seed_nodes))
     seen = {n.id for n in seed_nodes}

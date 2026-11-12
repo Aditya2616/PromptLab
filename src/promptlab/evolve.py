@@ -92,11 +92,15 @@ def run_evolution(
     backend: ChatBackend,
     cfg: EvoConfig,
     on_generation: Callable[[EvoResult], None] | None = None,
+    mutator: ChatBackend | None = None,
 ) -> EvoResult:
-    """Evolve prompts using only the dev split. The test split stays locked throughout."""
+    """Evolve prompts using only the dev split. The test split stays locked throughout.
+
+    ``mutator`` is the model the LLM operators (rewrite, reflect) talk to; by default the task model.
+    """
     task.lock_test()
     rng = np.random.default_rng(cfg.seed)
-    ctx = OpContext(task, backend, rng, cfg.max_words)
+    ctx = OpContext(task, mutator or backend, rng, cfg.max_words)
     res = EvoResult()
 
     seeds = task.seeds()
