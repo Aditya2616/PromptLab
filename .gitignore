@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+/data/
+/runs/
+.env
+*.sqlite
+*.sqlite-journal
+*.log
+.scratch/
