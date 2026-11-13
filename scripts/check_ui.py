@@ -51,6 +51,20 @@ def start_served(port: int):
     return lambda: (proc.terminate(), proc.wait(timeout=10))
 
 
+# Screenshots the README embeds: only recorded-run (static) captures, nothing else is written.
+KEPT_SHOTS = {("desktop", "graph"), ("desktop", "operators"), ("phone", "detail")}
+
+
+def snap(page: Page, shots: Path, vname: str, mode: str, name: str) -> None:
+    if mode != "static" or (vname, name) not in KEPT_SHOTS:
+        return
+    path = str(shots / f"{vname}-{name}.png")
+    if name == "operators":  # cut at the card boundary, not through the next section
+        page.locator("#operators").screenshot(path=path)
+    else:
+        page.screenshot(path=path)
+
+
 def tap_targets(page: Page) -> list[str]:
     return page.evaluate(
         """() => {
@@ -92,7 +106,7 @@ def run_mode(browser, mode: str, base: str, shots: Path | None, issues: list[str
 
         overflow("load")
         if shots:
-            page.screenshot(path=str(shots / f"{vname}-start.png"))
+            snap(page, shots, vname, mode, "start")
         # the sticky header must not cover the run label after jumping to the viewer
         page.evaluate("document.querySelector('#lab').scrollIntoView()")
         page.wait_for_timeout(1200)
@@ -109,12 +123,12 @@ def run_mode(browser, mode: str, base: str, shots: Path | None, issues: list[str
         page.wait_for_timeout(1300)
         page.evaluate("document.querySelector('#lab').scrollIntoView()")
         if shots:
-            page.screenshot(path=str(shots / f"{vname}-replay.png"))
+            snap(page, shots, vname, mode, "replay")
         page.evaluate("(()=>{const s=document.querySelector('#scrub');s.value=s.max;s.dispatchEvent(new Event('input'))})()")
         page.wait_for_timeout(1500)
         page.evaluate("document.querySelector('#lab').scrollIntoView()")
         if shots:
-            page.screenshot(path=str(shots / f"{vname}-graph.png"))
+            snap(page, shots, vname, mode, "graph")
         ind = page.inner_text("#genInd")
         if "of" not in ind:
             issues.append(f"{tag}: generation indicator missing ({ind!r})")
@@ -139,7 +153,7 @@ def run_mode(browser, mode: str, base: str, shots: Path | None, issues: list[str
         if vname == "phone" and "open" not in (page.get_attribute("#detail", "class") or ""):
             issues.append(f"{tag}: detail is not a bottom sheet on phone")
         if shots:
-            page.screenshot(path=str(shots / f"{vname}-detail.png"))
+            snap(page, shots, vname, mode, "detail")
         bad = tap_targets(page)
         if vname == "phone":
             issues.extend(f"{tag}: tap target too small: {b}" for b in bad)
@@ -160,13 +174,11 @@ def run_mode(browser, mode: str, base: str, shots: Path | None, issues: list[str
         page.evaluate("document.querySelector('#operators').scrollIntoView()")
         page.wait_for_timeout(1500)
         if shots:
-            page.screenshot(path=str(shots / f"{vname}-operators.png"))
+            snap(page, shots, vname, mode, "operators")
         overflow("after interaction")
         page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
         page.wait_for_timeout(1200)
         overflow("bottom")
-        if shots and mode == "static":
-            page.screenshot(path=str(shots / f"{vname}-full.png"), full_page=True)
         if mode == "served" and page.is_hidden("#live"):
             issues.append(f"{tag}: live panel not shown in served mode")
         if mode == "static" and page.is_visible("#live"):

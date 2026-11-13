@@ -4,7 +4,8 @@
     python scripts/check_numbers.py --check   # fail if anything is out of sync (a fast test runs this)
 
 Generated, never hand-typed: the tables and figures between ``<!-- BEGIN name -->`` and
-``<!-- END name -->`` markers in README.md, and the files in docs/data/ that the viewer reads.
+``<!-- END name -->`` markers in README.md (the pilot table: results/pilot/README.md), the inline
+``<!--v:name-->value<!--/v-->`` figures in README.md, and the files in docs/data/ that the viewer reads.
 ``CLAIMS`` lists the qualitative statements the README makes; each is verified against the data.
 """
 
@@ -22,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 README = ROOT / "README.md"
 RESULTS = ROOT / "results"
 PILOT = ROOT / "results" / "pilot"
+PILOT_README = PILOT / "README.md"
 DOCS = ROOT / "docs"
 
 pct = lambda x: f"{100 * x:.1f}"  # noqa: E731
@@ -192,7 +194,12 @@ def b_curse(S: dict) -> str:
 
 
 BLOCKS = {"setup": b_setup, "headline": b_headline, "paired": b_paired, "verdicts": b_verdicts,
-          "operators": b_operators, "operators_alt": b_operators_alt, "curse": b_curse, "pilot": b_pilot}
+          "operators": b_operators, "operators_alt": b_operators_alt, "curse": b_curse}
+
+# Single figures quoted inside a sentence: ``<!--v:name-->4.6<!--/v-->`` (marker outside any backticks).
+INLINE = {
+    "boolq_majority_vs_first_draft": lambda S: pts(S["tasks"]["boolq"]["majority_rate"] - S["tasks"]["boolq"]["arms"]["seed0"]["test_mean"]).lstrip("+"),
+}
 
 
 def _ci(S: dict, t: str, key: str = "evolved_vs_random") -> dict:
@@ -220,7 +227,8 @@ def _claim_beats_first_draft(S: dict) -> bool:
 
 def _claim_curse(S: dict) -> bool:
     ok = all(S["tasks"][t]["arms"][a]["gap_mean"] > 0 for t in ("csqa", "boolq") for a in ("best_seed", "random", "evolved"))
-    return ok and S["tasks"]["synthetic"]["arms"]["best_seed"]["gap_mean"] > 0
+    syn = S["tasks"]["synthetic"]["arms"]
+    return ok and syn["best_seed"]["gap_mean"] > 0 and syn["random"]["gap_mean"] > 0
 
 
 def _claim_boolq_no_headroom(S: dict) -> bool:
@@ -245,12 +253,24 @@ CLAIMS = {
     "synthetic_ahead": ("evolved beats random search on synthetic, CI above zero and ahead in every seed", _claim_synthetic_ahead),
     "synthetic_spread": ("on synthetic the evolved arm varies more across seeds than random search, or the last seed is not significant", _claim_seed_spread),
     "boolq_no_headroom": ("BoolQ first-draft prompt is below the majority rate; evolved and random stay within 3 points of it", _claim_boolq_no_headroom),
-    "winners_curse": ("dev exceeds test for every dev-picked prompt on CommonsenseQA and BoolQ, and for the best seed on synthetic", _claim_curse),
+    "winners_curse": ("dev exceeds test for every dev-picked prompt on CommonsenseQA and BoolQ, and for the best seed and the random-search winner on synthetic", _claim_curse),
     "format_ops": ("on synthetic, add_shot beats its parent on dev more often than either LLM operator", _claim_format_ops),
 }
 
 
+def render_pilot(text: str) -> str:
+    pat = re.compile(r"(<!-- BEGIN pilot -->)\s*(.*?)\s*(<!-- END pilot -->)", re.S)
+    if not pat.search(text):
+        raise SystemExit("results/pilot/README.md is missing the <!-- BEGIN pilot --> / END markers")
+    return pat.sub(lambda m: m.group(1) + chr(10) + b_pilot({}) + chr(10) + m.group(3), text)
+
+
 def render(text: str, S: dict) -> str:
+    for name, fn in INLINE.items():
+        pat = re.compile(rf"(<!--v:{name}-->)(.*?)(<!--/v-->)")
+        if not pat.search(text):
+            raise SystemExit(f"README.md is missing the <!--v:{name}--> / <!--/v--> markers")
+        text = pat.sub(lambda m, f=fn: m.group(1) + f(S) + m.group(3), text)
     for name, fn in BLOCKS.items():
         pat = re.compile(rf"(<!-- BEGIN {name} -->)\s*(.*?)\s*(<!-- END {name} -->)", re.S)
         if not pat.search(text):
@@ -295,6 +315,9 @@ def main(argv: list[str] | None = None) -> int:
         if m.group(1) not in CLAIMS:
             problems.append(f"unknown claim marker {m.group(1)}")
 
+    pilot_text = PILOT_README.read_text(encoding="utf-8")
+    pilot_new = render_pilot(pilot_text)
+
     data_dir = Path(args.docs) / "data"
     files = viewer_files(args.results)
     if args.write:
@@ -302,10 +325,14 @@ def main(argv: list[str] | None = None) -> int:
         export_demo(args.results, args.docs)
         if new != text:
             readme.write_text(new, encoding="utf-8")
+        if pilot_new != pilot_text:
+            PILOT_README.write_text(pilot_new, encoding="utf-8")
         print("README blocks and docs/data regenerated")
     else:
         if new != text:
             problems.append("README.md tables are out of sync with results/ (run scripts/check_numbers.py --write)")
+        if pilot_new != pilot_text:
+            problems.append("results/pilot/README.md is out of sync with the pilot results (run scripts/check_numbers.py --write)")
         have = {p.name for p in data_dir.glob("*.json")} if data_dir.exists() else set()
         if have != set(files):
             problems.append(f"docs/data files differ: extra {sorted(have - set(files))}, missing {sorted(set(files) - have)}")

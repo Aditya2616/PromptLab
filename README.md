@@ -2,13 +2,40 @@
 
 Prompt engineering, treated as an optimisation problem. PromptLab keeps a population of prompt variants, mutates them, scores every variant on a dev split, keeps the strongest for the next generation, and finally scores the winners **once** on a held-out test split, next to a random-search baseline given exactly the same dev budget. Python, NumPy, a small local model, and an OpenAI-compatible adapter.
 
+[![CI](https://github.com/Aditya2616/PromptLab/actions/workflows/ci.yml/badge.svg)](https://github.com/Aditya2616/PromptLab/actions/workflows/ci.yml)
+[![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
+
 ![PromptLab viewer: one column per generation, survivors in lime, culled variants fading](docs/assets/desktop-graph.png)
 
 The viewer replays real runs. Each column is a generation, each node a prompt variant, survivors glow lime, culled variants fade, curves link every child to its parent, and the best dev score climbs in step. Tap a node to see its prompt as a word diff against its parent, with its scores. Pick a task and a seed at the top. The page in `docs/` is a static replay of the recorded runs below (labelled "Recorded run", with seed, commit and device); run the server locally to launch a live run.
 
 | Desktop | Phone (390 px) |
 |---|---|
-| ![](docs/assets/desktop-detail.png) | ![](docs/assets/phone-detail.png) |
+| <img src="docs/assets/desktop-operators.png" alt="Operator table: for each mutation, how many children beat their parent on dev and how many still beat it on the held-out items"> | <img src="docs/assets/phone-detail.png" width="260" alt="Phone bottom sheet for one prompt variant: dev accuracy, change against its parent, and the prompt as a word diff"> |
+
+## How it works
+
+```mermaid
+flowchart LR
+  S[seed prompts] --> E[score on dev]
+  E --> P[select parents: tournament or Pareto]
+  P --> M[mutate: reorder, drop, add clause, swap format, add/remove shot, crossover, LLM rewrite, LLM reflect]
+  M --> G[guards: length, empty, unchanged, duplicate]
+  G --> E
+  E --> K[keep top-k, shorter prompt breaks ties]
+  K -->|last generation| T[score winners once on test]
+  R[random search, equal dev budget] --> T
+  T --> X[stats: bootstrap CI, exact McNemar, winner's curse, per-operator table]
+  X --> J[results/task-seed.json]
+  J --> V[viewer: served by FastAPI or static docs/]
+```
+
+- `models/`: a `ChatBackend` protocol, a local transformers backend (batched greedy generation; CUDA float16 when a GPU is available, otherwise CPU float32; out-of-memory retries with a smaller batch), an OpenAI-compatible client, and a SQLite call cache (key = hash of backend, model, device, dtype, messages and parameters) that makes runs reproducible and resumable.
+- `tasks/`: CommonsenseQA, BoolQ and a seeded synthetic task (sort, nth word, count a letter), each with disjoint few-shot pool, dev and test splits.
+- `operators.py`: deterministic operators edit a structured prompt (instruction sentences, format constraint, few-shot ids). Two LLM operators ask the mutator model to rewrite the instruction, or to reflect on three failed dev examples. A 0.5B model is a weak rewriter, so everything passes through guards.
+- `select.py`: NumPy selection; Pareto parent choice works on per-example score vectors.
+- `stats.py`, `summary.py`: Wilson and bootstrap intervals, paired bootstrap, exact McNemar, and the cross-seed aggregation that feeds the README and the viewer.
+- `api.py`: FastAPI with `/health`, live runs streamed over SSE, and the static viewer.
 
 ## Read this before trusting any number
 
@@ -19,7 +46,7 @@ I built this to measure prompt search honestly, so the caveats come first.
 - **The test split is touched once**, after the search finishes. `Task.test` raises while the loop runs, and a test asserts it. The winner's-curse gap (dev accuracy minus test accuracy of the prompt picked on dev) is reported for every method.
 - **Random search at equal budget** is the control: same operators, no selection feedback, the same number of dev evaluations, best picked on dev. Evolution has to beat that, not just the seed prompt.
 - **Seeds vary the search, not the data.** The seed prompts, the few-shot pool, the dev items and the test items are the same in every seed. Three seeds measure search-to-search variation; they do not measure how results would change on other data.
-- **BoolQ has no headroom at this model size.** Its majority answer scores about as well as the first-draft prompt, so there is little for any prompt search to find. I kept it, and say so, instead of hiding it.
+- **BoolQ has no headroom at this model size.** Its majority answer scores <!--v:boolq_majority_vs_first_draft-->4.6<!--/v--> points above the first-draft prompt, so there is little for any prompt search to find. I kept it, and say so, instead of hiding it.
 
 ## Results
 
@@ -83,7 +110,7 @@ What this says, plainly:
 - BoolQ: evolved minus random search is -0.8 pts (95% CI -2.1 to +0.4), ahead in 0 of 3 seeds; the interval includes zero.
 <!-- END verdicts -->
 
-**Null result where there is little to find, a win where there is more.** On CommonsenseQA and BoolQ the design is well powered (the setup above: a few hundred items per split, three seeds, and a baseline given exactly the same number of dev evaluations) and still finds no difference from random search. My reading: with a 0.5B model the useful edits are few and mostly about output format; random edits find them as quickly as selection does, and the dev set is too noisy for selection to separate the next few points from luck. The synthetic task, where wording, demonstrations and format all matter and the seed prompts start near zero, is where chains of selected edits pull ahead. That explanation is a hypothesis; I did not run an experiment that isolates it.
+**Null result where there is little to find, a win where there is more.** On CommonsenseQA and BoolQ the design can rule out differences larger than about 2 points on these two tasks (the setup above: a few hundred items per split, three seeds, and a baseline given exactly the same number of dev evaluations), and it still finds no difference from random search. My reading: with a 0.5B model the useful edits are few and mostly about output format; random edits find them as quickly as selection does, and the dev set is too noisy for selection to separate the next few points from luck. The synthetic task, where wording, demonstrations and format all matter and the seed prompts start near zero, is where chains of selected edits pull ahead. That explanation is a hypothesis; I did not run an experiment that isolates it.
 
 ### Winner's curse
 
@@ -103,7 +130,7 @@ Means over seeds; the gap is dev minus test of the prompt each method picked on 
 |  | Evolved winner | 71.5 | 64.4 | +7.1 |
 <!-- END curse -->
 
-The prompt picked on dev scores lower on test for every method on CommonsenseQA and BoolQ, and for the best seed on the synthetic task: that is selection on a noisy set. <!-- claim:winners_curse --> On CommonsenseQA the gap is about the same for evolution and random search. On the synthetic task the evolved winners score higher on test than on dev on average, with a large spread between seeds, so I would not read anything into the sign there.
+The prompt picked on dev scores lower on test for every method on CommonsenseQA and BoolQ, and for the best seed and the random-search winner on the synthetic task: that is selection on a noisy set. <!-- claim:winners_curse --> On CommonsenseQA the gap is about the same for evolution and random search. On the synthetic task the evolved winners score higher on test than on dev on average, with a large spread between seeds, so I would not read anything into the sign there.
 
 ### Which mutations paid off
 
@@ -187,43 +214,7 @@ The LLM operators (rewrite, reflect on failures) normally ask the 0.5B task mode
 | `llm_rewrite` | 1.5B | 51 | 12 (23.5%) | +1.6 |
 <!-- END operators_alt -->
 
-### Pilot run (CPU, 3 generations, 40 dev items)
-
-My first experiments were tiny, and are kept only for the record in `results/pilot/`. They are not mixed into any table above: one seed, a different device and dtype, a tenth of the budget.
-
-<!-- BEGIN pilot -->
-Pilot settings: cpu float32, 3 generations, population 4, 4 children, 40 dev items, 100 test items, seed 0, commit `530c703`. Test accuracy (%) with 95% bootstrap CI.
-
-| Task | First-draft seed | Best seed (dev) | Random search | Evolved winner |
-|---|---|---|---|---|
-| CommonsenseQA | 34.0 [25.0, 43.0] | 48.0 [38.0, 58.0] | 55.0 [45.0, 65.0] | 55.0 [45.0, 65.0] |
-| BoolQ | 66.0 [57.0, 75.0] | 71.0 [62.0, 80.0] | 69.0 [60.0, 78.0] | 70.0 [61.0, 79.0] |
-| Synthetic transforms | 7.0 [2.0, 12.0] | 12.0 [6.0, 19.0] | 36.0 [27.0, 45.0] | 38.0 [29.0, 48.0] |
-<!-- END pilot -->
-
-## How it works
-
-```mermaid
-flowchart LR
-  S[seed prompts] --> E[score on dev]
-  E --> P[select parents: tournament or Pareto]
-  P --> M[mutate: reorder, drop, add clause, swap format, add/remove shot, crossover, LLM rewrite, LLM reflect]
-  M --> G[guards: length, empty, unchanged, duplicate]
-  G --> E
-  E --> K[keep top-k, shorter prompt breaks ties]
-  K -->|last generation| T[score winners once on test]
-  R[random search, equal dev budget] --> T
-  T --> X[stats: bootstrap CI, exact McNemar, winner's curse, per-operator table]
-  X --> J[results/task-seed.json]
-  J --> V[viewer: served by FastAPI or static docs/]
-```
-
-- `models/`: a `ChatBackend` protocol, a local transformers backend (batched greedy generation; CUDA float16 when a GPU is available, otherwise CPU float32; out-of-memory retries with a smaller batch), an OpenAI-compatible client, and a SQLite call cache (key = hash of backend, model, device, dtype, messages and parameters) that makes runs reproducible and resumable.
-- `tasks/`: CommonsenseQA, BoolQ and a seeded synthetic task (sort, nth word, count a letter), each with disjoint few-shot pool, dev and test splits.
-- `operators.py`: deterministic operators edit a structured prompt (instruction sentences, format constraint, few-shot ids). Two LLM operators ask the mutator model to rewrite the instruction, or to reflect on three failed dev examples. A 0.5B model is a weak rewriter, so everything passes through guards.
-- `select.py`: NumPy selection; Pareto parent choice works on per-example score vectors.
-- `stats.py`, `summary.py`: Wilson and bootstrap intervals, paired bootstrap, exact McNemar, and the cross-seed aggregation that feeds the README and the viewer.
-- `api.py`: FastAPI with `/health`, live runs streamed over SSE, and the static viewer.
+The first, much smaller experiments (CPU, 3 generations, 40 dev items, one seed) are kept for reference in [`results/pilot/`](results/pilot/README.md). They are not mixed into any table above.
 
 ## Quickstart
 
@@ -237,6 +228,8 @@ pytest && ruff check .                    # fast, offline, CPU, scripted backend
 promptlab serve                           # viewer at http://127.0.0.1:8103
 promptlab run --task synthetic --backend fake --generations 3   # instant, no model download
 ```
+
+## Reproduce
 
 To reproduce the recorded runs you also need the local backend and a GPU (a CPU works but is far slower):
 
@@ -255,6 +248,22 @@ python scripts/check_ui.py --shots docs/assets   # headless check of the viewer,
 - **Local transformers, Qwen2.5-0.5B-Instruct as the task model: used for every recorded result, on CUDA in float16** (also recorded as `device` and `dtype` in each result file). Device and dtype are part of the cache key and the cache file name, so a run never mixes completions from different numerics. Qwen2.5-1.5B-Instruct was used only as the mutator in the optional arm.
 - **OpenAI-compatible client: adapter code, tested only against a stub HTTP transport** (`httpx.MockTransport`). I did not call a hosted API. Set `PROMPTLAB_BACKEND=openai`, `OPENAI_API_KEY`, `OPENAI_BASE_URL` and `PROMPTLAB_MODEL` (see `.env.example`); a local llama.cpp, vLLM or Ollama server works as the base URL.
 - **The fast tests and the quickstart use the scripted `fake` backend on the CPU**; nothing in them needs torch.
+
+## Layout
+
+```
+src/promptlab/   core: evolve.py, operators.py, select.py, stats.py, summary.py, pipeline.py, api.py, cli.py
+  models/        ChatBackend protocol, local transformers backend, OpenAI-compatible client, call cache, scripted fake
+  tasks/         CommonsenseQA, BoolQ, seeded synthetic task
+scripts/         run_experiments.py, check_numbers.py (README and viewer data from results/), check_ui.py
+results/         one JSON per task and seed; results/pilot/ holds the small CPU pilot
+docs/            static viewer (index.html, app.js, style.css), data/ it reads, notes/, assets/
+tests/           fast offline tests
+```
+
+## Static demo
+
+The page in `docs/` is a self-contained replay of the recorded runs, labelled "Recorded run" with seed, commit and device. There is no hosted copy yet; the `docs/` folder can be served by GitHub Pages, or locally with `python -m http.server --directory docs`. Run `promptlab serve` for the live panel.
 
 ## Limitations
 
