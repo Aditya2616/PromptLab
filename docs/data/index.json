@@ -2,21 +2,103 @@
  "runs": [
   {
    "file": "csqa-s0.json",
-   "task": "CommonsenseQA",
    "name": "csqa",
-   "model": "Qwen/Qwen2.5-0.5B-Instruct"
+   "task": "CommonsenseQA",
+   "seed": 0,
+   "model": "Qwen/Qwen2.5-0.5B-Instruct",
+   "device": "cuda",
+   "dtype": "float16",
+   "commit": "1150faa",
+   "dirty": false
   },
   {
-   "file": "boolq-s0.json",
-   "task": "BoolQ",
-   "name": "boolq",
-   "model": "Qwen/Qwen2.5-0.5B-Instruct"
+   "file": "csqa-s1.json",
+   "name": "csqa",
+   "task": "CommonsenseQA",
+   "seed": 1,
+   "model": "Qwen/Qwen2.5-0.5B-Instruct",
+   "device": "cuda",
+   "dtype": "float16",
+   "commit": "18037ae",
+   "dirty": false
+  },
+  {
+   "file": "csqa-s2.json",
+   "name": "csqa",
+   "task": "CommonsenseQA",
+   "seed": 2,
+   "model": "Qwen/Qwen2.5-0.5B-Instruct",
+   "device": "cuda",
+   "dtype": "float16",
+   "commit": "18037ae",
+   "dirty": false
   },
   {
    "file": "synthetic-s0.json",
-   "task": "Synthetic transforms",
    "name": "synthetic",
-   "model": "Qwen/Qwen2.5-0.5B-Instruct"
+   "task": "Synthetic transforms",
+   "seed": 0,
+   "model": "Qwen/Qwen2.5-0.5B-Instruct",
+   "device": "cuda",
+   "dtype": "float16",
+   "commit": "18037ae",
+   "dirty": false
+  },
+  {
+   "file": "synthetic-s1.json",
+   "name": "synthetic",
+   "task": "Synthetic transforms",
+   "seed": 1,
+   "model": "Qwen/Qwen2.5-0.5B-Instruct",
+   "device": "cuda",
+   "dtype": "float16",
+   "commit": "18037ae",
+   "dirty": false
+  },
+  {
+   "file": "synthetic-s2.json",
+   "name": "synthetic",
+   "task": "Synthetic transforms",
+   "seed": 2,
+   "model": "Qwen/Qwen2.5-0.5B-Instruct",
+   "device": "cuda",
+   "dtype": "float16",
+   "commit": "18037ae",
+   "dirty": false
+  },
+  {
+   "file": "boolq-s0.json",
+   "name": "boolq",
+   "task": "BoolQ",
+   "seed": 0,
+   "model": "Qwen/Qwen2.5-0.5B-Instruct",
+   "device": "cuda",
+   "dtype": "float16",
+   "commit": "18037ae",
+   "dirty": false
+  },
+  {
+   "file": "boolq-s1.json",
+   "name": "boolq",
+   "task": "BoolQ",
+   "seed": 1,
+   "model": "Qwen/Qwen2.5-0.5B-Instruct",
+   "device": "cuda",
+   "dtype": "float16",
+   "commit": "18037ae",
+   "dirty": false
+  },
+  {
+   "file": "boolq-s2.json",
+   "name": "boolq",
+   "task": "BoolQ",
+   "seed": 2,
+   "model": "Qwen/Qwen2.5-0.5B-Instruct",
+   "device": "cuda",
+   "dtype": "float16",
+   "commit": "18037ae",
+   "dirty": false
   }
- ]
+ ],
+ "summary": "summary.json"
 }
