@@ -311,9 +311,9 @@ def main(argv: list[str] | None = None) -> int:
             problems.append(f"docs/data files differ: extra {sorted(have - set(files))}, missing {sorted(set(files) - have)}")
         for name, data in files.items():
             f = data_dir / name
-            if f.exists() and not (data == f.read_bytes().replace(b"
-", b"
-") or (name == "summary.json" and _same_json(data, f.read_bytes()))):
+            on_disk = f.read_bytes().replace(bytes([13, 10]), bytes([10])) if f.exists() else b""
+            data = data.replace(bytes([13, 10]), bytes([10]))
+            if f.exists() and not (data == on_disk or (name == "summary.json" and _same_json(data, on_disk))):
                 problems.append(f"docs/data/{name} is out of sync with results/")
     for p in problems:
         print("PROBLEM:", p)
