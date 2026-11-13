@@ -24,6 +24,14 @@ CACHE = ROOT / "runs"
 app = FastAPI(title="PromptLab", version=__version__)
 
 
+@app.middleware("http")
+async def mark_served(request, call_next):
+    """Lets the page tell a served app (live runs available) from a static copy without probing for a missing URL."""
+    response = await call_next(request)
+    response.headers["X-PromptLab"] = "live"
+    return response
+
+
 class Health(BaseModel):
     status: Literal["ok"] = "ok"
     version: str

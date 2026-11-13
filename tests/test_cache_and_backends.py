@@ -54,7 +54,7 @@ def test_openai_backend_with_stub_transport():
         )
 
     client = httpx.Client(transport=httpx.MockTransport(handler))
-    b = OpenAICompatBackend("gpt-test", api_key="k", base_url="http://local.test/v1", http_client=client)
+    b = OpenAICompatBackend("stub-model", api_key="k", base_url="http://local.test/v1", http_client=client)
     out = b.complete([req("one", max_tokens=5), req("two")])
     assert out == ["ok:one", "ok:two"]
     assert all(u.endswith("/chat/completions") for u, _ in seen)

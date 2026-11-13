@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import argparse
-import json
 import os
-import shutil
 import sys
 from pathlib import Path
 
@@ -59,20 +57,12 @@ def cmd_run(args: argparse.Namespace) -> int:
 
 
 def cmd_export(args: argparse.Namespace) -> int:
-    """Copy finished run files into docs/data and write the index the static site reads."""
-    src, dst = Path(args.results), Path(args.docs) / "data"
-    dst.mkdir(parents=True, exist_ok=True)
-    runs = []
-    order = ["csqa", "boolq", "synthetic"]
-    files = sorted(src.glob("*.json"), key=lambda f: (order.index(f.stem.split("-")[0]) if f.stem.split("-")[0] in order else 99, f.name))
-    for f in files:
-        d = json.loads(f.read_text(encoding="utf-8"))
-        if d.get("schema") != 1 or "report" not in d:
-            continue
-        shutil.copy(f, dst / f.name)
-        runs.append({"file": f.name, "task": d["task"]["title"], "name": d["task"]["name"], "model": d["model"]})
-    (dst / "index.json").write_text(json.dumps({"runs": runs}, indent=1), encoding="utf-8")
-    print(f"exported {len(runs)} runs to {dst}")
+    """Copy finished run files into docs/data and write the index and cross-seed summary the static site reads."""
+    from .summary import export_demo
+
+    names = export_demo(args.results, args.docs)
+    runs = [n for n in names if n not in ("index.json", "summary.json")]
+    print(f"exported {len(runs)} runs to {Path(args.docs) / 'data'}")
     return 0
 
 

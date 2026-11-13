@@ -24,7 +24,8 @@ dependencies = [
 
 [project.optional-dependencies]
 local = ["torch>=2.2", "transformers>=4.45"]
-dev = ["pytest>=8", "ruff>=0.5", "playwright>=1.45"]
+dev = ["pytest>=8", "ruff>=0.5"]
+ui = ["playwright>=1.45"]
 
 [project.scripts]
 promptlab = "promptlab.cli:main"
