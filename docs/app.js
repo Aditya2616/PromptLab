@@ -1,14 +1,16 @@
-// PromptLab viewer. Renders a run.json (recorded or streamed live) as a lineage graph.
+// PromptLab viewer. Replays recorded runs (docs/data) or a live run streamed by the local server.
+// Every number on the page is read from the run files and summary.json; none is typed in here.
 const $ = (s) => document.querySelector(s);
 const NS = 'http://www.w3.org/2000/svg';
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const S = { run: null, nodes: [], byId: {}, G: 0, maxStep: 0, step: 0, sel: null, playing: false, timer: null,
-            speed: 1, inView: true, lineage: new Set(), els: {}, live: false, layout: {} };
+            speed: 1, inView: true, lineage: new Set(), anc: new Set(), els: {}, live: false, layout: {},
+            index: [], summary: null, task: null, seed: null };
 
-const esc = (t) => String(t).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const pct = (x, d = 1) => (x * 100).toFixed(d);
-const pts = (x) => `${x >= 0 ? '+' : ''}${(x * 100).toFixed(1)} pts`;
-const fmtP = (p) => (p < 0.001 ? '<0.001' : p.toFixed(3));
+const pts = (x) => `${x >= 0 ? '+' : '−'}${Math.abs(x * 100).toFixed(1)}`;
+const fmtP = (p) => (p < 0.001 ? '< 0.001' : `= ${p.toFixed(3)}`);
 function el(tag, attrs = {}, parent) {
   const n = document.createElementNS(NS, tag);
   for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
@@ -16,33 +18,53 @@ function el(tag, attrs = {}, parent) {
   return n;
 }
 const isPhone = () => matchMedia('(max-width: 960px)').matches;
+const LABEL = { seed0: 'Seed prompt', best_seed: 'Best seed', random: 'Random-search winner', evolved: 'Evolved winner', evolved_alt: 'Evolved, 1.5B mutator' };
 
 /* ---------- data ---------- */
 async function init() {
+  bindControls();
   try {
     const idx = await (await fetch('data/index.json')).json();
     S.index = idx.runs;
-    const tabs = $('#runTabs');
-    idx.runs.forEach((r, i) => {
-      const b = document.createElement('button');
-      b.className = 'tab'; b.role = 'tab'; b.textContent = r.task; b.dataset.file = r.file;
-      b.setAttribute('aria-selected', i === 0);
-      b.onclick = () => selectTab(r.file);
-      tabs.appendChild(b);
-    });
-    if (idx.runs.length) await selectTab(idx.runs[0].file);
+    if (idx.summary) S.summary = await (await fetch(`data/${idx.summary}`)).json();
+    const want = new URLSearchParams(location.search).get('run');
+    const first = S.index.find((r) => r.file === `${want}.json`) || S.index[0];
+    if (first) await selectRun(first.name, first.seed);
   } catch (e) {
     $('#caption').textContent = 'Could not load recorded runs (data/index.json).';
   }
-  bindControls();
   detectLive();
 }
 
-async function selectTab(file) {
+function buildPicker() {
+  const tabs = $('#runTabs'), seeds = $('#seedTabs');
+  tabs.replaceChildren(); seeds.replaceChildren();
+  const names = [...new Set(S.index.map((r) => r.name))];
+  names.forEach((n) => {
+    const r = S.index.find((x) => x.name === n);
+    const b = document.createElement('button');
+    b.className = 'tab'; b.setAttribute('role', 'tab'); b.textContent = r.task; b.dataset.name = n;
+    b.setAttribute('aria-selected', n === S.task);
+    b.onclick = () => selectRun(n, (S.index.find((x) => x.name === n && x.seed === S.seed) || S.index.find((x) => x.name === n)).seed);
+    tabs.appendChild(b);
+  });
+  S.index.filter((r) => r.name === S.task).forEach((r) => {
+    const b = document.createElement('button');
+    b.className = 'tab seed'; b.setAttribute('role', 'tab'); b.textContent = `seed ${r.seed}`; b.dataset.seed = r.seed;
+    b.setAttribute('aria-selected', r.seed === S.seed);
+    b.onclick = () => selectRun(S.task, r.seed);
+    seeds.appendChild(b);
+  });
+}
+
+async function selectRun(name, seed) {
   stopLive();
-  document.querySelectorAll('.tab').forEach((t) => t.setAttribute('aria-selected', t.dataset.file === file));
-  const run = await (await fetch(`data/${file}`)).json();
+  S.task = name; S.seed = seed;
+  buildPicker();
+  const meta = S.index.find((r) => r.name === name && r.seed === seed);
+  const run = await (await fetch(`data/${meta.file}`)).json();
   loadRun(run, { fresh: true });
+  renderSeeds(); renderOps();
 }
 
 function derive(run) {
@@ -57,9 +79,13 @@ function derive(run) {
     if (!last) return null;
     return last.survivors.slice().sort((a, b) => S.byId[b].dev_acc - S.byId[a].dev_acc)[0];
   })();
-  S.lineage = new Set();
-  const walk = (id) => { if (!id || S.lineage.has(id)) return; S.lineage.add(id); (S.byId[id]?.parents || []).forEach(walk); };
-  walk(S.winner);
+  S.lineage = ancestry(S.winner);
+}
+function ancestry(id) {
+  const out = new Set();
+  const walk = (x) => { if (!x || out.has(x)) return; out.add(x); (S.byId[x]?.parents || []).forEach(walk); };
+  walk(id);
+  return out;
 }
 
 function loadRun(run, { fresh = false } = {}) {
@@ -67,58 +93,73 @@ function loadRun(run, { fresh = false } = {}) {
   const t = run.task, g = run.git || {};
   $('#runMeta').textContent = (run.recorded === false || S.live)
     ? `LIVE RUN · ${run.model} · backend ${run.backend} · seed ${run.seed}`
-    : `RECORDED RUN · ${run.model} · backend ${run.backend}${run.device ? ` (${run.device}/${run.dtype})` : } · seed ${run.seed} · commit ${g.commit || 'n/a'}${g.dirty ? '+dirty' : ''} · ` +
-      `${t.n_dev} dev / ${t.n_test} test items · ${run.calls?.model_calls ?? '?'} model calls · ${Math.round((run.seconds || 0) / 60)} min · data: ${t.source}`;
+    : `RECORDED RUN · ${run.model}${run.device ? ` (${run.device} ${run.dtype})` : ''} · seed ${run.seed} · commit ${g.commit || 'n/a'}${g.dirty ? '+dirty' : ''} · ` +
+      `${run.config.generations} generations, population ${run.config.pop} · ${t.n_dev} dev / ${t.n_test} test items · ` +
+      `${(run.calls?.model_calls ?? 0).toLocaleString('en-GB')} model calls · ${Math.round((run.seconds || 0) / 60)} min · data: ${t.source}`;
+  S.sel = fresh ? null : S.sel; S.anc = ancestry(S.sel);
   buildGraph();
   renderCurve();
+  renderHeldout();
   renderResults();
-  renderOps();
+  $('#scrub').max = S.maxStep;
   if (fresh) {
-    S.sel = null;
     renderDetail(null);
     stopPlay();
-    if (reduce || S.live) setStep(S.maxStep); else { setStep(0); S.sel = null; startPlay(); }
+    if (reduce || S.live) setStep(S.maxStep); else { setStep(0); startPlay(); }
   } else {
     setStep(S.maxStep);
   }
-  const sc = $('#scrub');
-  sc.max = S.maxStep;
 }
 
 /* ---------- graph ---------- */
+const PAD = { l: 46, r: 40, t: 34, b: 22 };
 function buildGraph() {
   const svg = $('#graph'); svg.replaceChildren();
   const box = $('#graphScroll');
-  const padL = 46, padR = 34, padT = 34, padB = 22, H = isPhone() ? 300 : 360;
-  const colW = Math.max(120, Math.floor((box.clientWidth - padL - padR) / Math.max(1, S.G)));
-  const W = padL + S.G * colW + padR;
+  const H = isPhone() ? 340 : 390;
+  const colW = Math.max(isPhone() ? 112 : 108, Math.floor((box.clientWidth - PAD.l - PAD.r) / Math.max(1, S.G)));
+  const W = PAD.l + S.G * colW + PAD.r;
   svg.setAttribute('width', W); svg.setAttribute('height', H); svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  const accs = S.nodes.map((n) => n.dev_acc);
-  let lo = Math.max(0, Math.min(...accs) - 0.05), hi = Math.min(1, Math.max(...accs) + 0.05);
+  const accs = S.nodes.map((n) => n.dev_acc), sorted = accs.slice().sort((a, b) => a - b);
+  let lo = Math.max(0, sorted[0] - 0.03), hi = Math.min(1, sorted[sorted.length - 1] + 0.04);
   if (hi - lo < 0.2) { const m = (hi + lo) / 2; lo = Math.max(0, m - 0.1); hi = Math.min(1, m + 0.1); }
-  const Y = (a) => padT + (1 - (a - lo) / (hi - lo)) * (H - padT - padB);
-  const X = (g) => padL + g * colW;
-  const step = hi - lo > 0.5 ? 0.2 : 0.1;
-  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) {
-    el('line', { class: 'grid-line', x1: padL - 6, x2: W - padR + 10, y1: Y(v), y2: Y(v) }, svg);
-    el('text', { class: 'grid-label', x: 0, y: Y(v) + 3 }, svg).textContent = pct(v, 0);
+  // a few very weak variants would squash everything else: give them a compressed strip below an axis break
+  const q = sorted[Math.floor(sorted.length * 0.12)];
+  const split = Math.floor((q - 0.02) * 20) / 20;
+  const tail = split - lo > 0.12 && (hi - split) < 0.7 * (hi - lo);
+  const ph = H - PAD.t - PAD.b, topH = tail ? ph * 0.8 : ph, gap = 14;
+  const Y = (a) => (!tail || a >= split)
+    ? PAD.t + (1 - (a - (tail ? split : lo)) / (hi - (tail ? split : lo))) * topH
+    : PAD.t + topH + gap + ((split - a) / (split - lo)) * (ph - topH - gap);
+  const X = (g) => PAD.l + g * colW;
+  const base = tail ? split : lo, step = hi - base > 0.5 ? 0.2 : hi - base > 0.2 ? 0.1 : 0.05;
+  for (let v = Math.ceil(base / step - 1e-9) * step; v <= hi + 1e-9; v += step) {
+    el('line', { class: 'grid-line', x1: PAD.l - 6, x2: W - PAD.r + 14, y1: Y(v), y2: Y(v) }, svg);
+    el('text', { class: 'grid-label', x: 2, y: Y(v) + 3 }, svg).textContent = pct(v, 0) + '%';
+  }
+  if (tail) {
+    const yb = PAD.t + topH + gap / 2;
+    el('line', { class: 'break-line', x1: PAD.l - 6, x2: W - PAD.r + 14, y1: yb, y2: yb }, svg);
+    el('text', { class: 'grid-label', x: 2, y: yb + 11 }, svg).textContent = `<${pct(split, 0)}%`;
+    el('text', { class: 'grid-label', x: 2, y: H - PAD.b + 12 }, svg).textContent = 'scale compressed';
   }
   const pos = {}, labelFor = new Set();
+  const offs = [0, 22, -22, 44, -44, 66, -66];
   for (let g = 0; g <= S.G; g++) {
-    el('line', { class: 'col-rule', x1: X(g), x2: X(g), y1: 20, y2: H - padB + 6 }, svg);
+    el('line', { class: 'col-rule', x1: X(g), x2: X(g), y1: 20, y2: H - PAD.b + 6 }, svg);
     el('text', { class: 'col-label', x: X(g), y: 12, 'text-anchor': 'middle' }, svg).textContent = g === 0 ? 'GEN 0 · SEEDS' : `GEN ${g}`;
     const col = S.nodes.filter((n) => n.gen === g).sort((a, b) => b.dev_acc - a.dev_acc);
     if (col.length) labelFor.add(col[0].id);
-    const offs = [0, 26, -26, 52, -52], lastY = offs.map(() => -99);
+    const lastY = offs.map(() => -99);
     for (const n of col) {
       const y = Y(n.dev_acc);
-      let lane = offs.findIndex((_, i) => y - lastY[i] >= 24);
+      let lane = offs.findIndex((_, i) => y - lastY[i] >= 20);
       if (lane < 0) lane = 0;
       lastY[lane] = y;
       pos[n.id] = [X(g) + offs[lane], y];
     }
   }
-  S.layout = { pos, W, H };
+  S.layout = { pos, W, H, colW };
   const gE = el('g', {}, svg), gN = el('g', {}, svg), els = { nodes: {}, edges: [], labels: {} };
   for (const n of S.nodes) {
     for (const p of n.parents) {
@@ -133,20 +174,28 @@ function buildGraph() {
     const g = el('g', { class: 'node', transform: `translate(${x},${y})`, tabindex: 0, role: 'button',
       'aria-label': `Variant ${n.id}, generation ${n.gen}, dev accuracy ${pct(n.dev_acc)} percent` }, gN);
     el('circle', { class: 'halo', r: 15 }, g);
-    el('circle', { class: 'dot', r: 7 }, g);
-    el('circle', { class: 'ring', r: 13 }, g);
-    el('circle', { r: 22, fill: 'transparent' }, g);
+    el('circle', { class: 'dot', r: 6.5 }, g);
+    el('circle', { class: 'ring', r: 12 }, g);
+    el('circle', { class: 'hit', r: 22, fill: 'transparent' }, g);
     g.addEventListener('click', () => selectNode(n.id, true));
     g.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectNode(n.id, true); } });
     els.nodes[n.id] = g;
     if (labelFor.has(n.id)) {
-      const t = el('text', { class: 'node-label', x, y: y - 16, 'text-anchor': 'middle' }, svg);
+      const t = el('text', { class: 'node-label', x, y: y - 15, 'text-anchor': 'middle' }, svg);
       t.textContent = pct(n.dev_acc);
       els.labels[n.id] = t;
     }
   }
   S.els = els;
   applyStep(S.step);
+  edgeFades();
+}
+
+function edgeFades() {
+  const box = $('#graphScroll'), wrap = $('#graphWrap');
+  const max = box.scrollWidth - box.clientWidth;
+  wrap.classList.toggle('fade-l', box.scrollLeft > 4);
+  wrap.classList.toggle('fade-r', max > 4 && box.scrollLeft < max - 4);
 }
 
 function applyStep(s) {
@@ -172,32 +221,34 @@ function applyStep(s) {
     e.path.classList.toggle('keep', c.keep);
     e.path.classList.toggle('cull', c.culled);
     e.path.classList.toggle('win', final && S.lineage.has(e.child.id) && S.lineage.has(e.parent.id));
+    e.path.classList.toggle('anc', !!S.sel && S.anc.has(e.child.id) && S.anc.has(e.parent.id));
   }
-  const g = Math.floor(s / 2);
+  const g = Math.min(S.G, Math.floor(s / 2));
+  const gen = S.run.generations.find((x) => x.gen === g);
   let cap;
-  if (s > 2 * S.G + 1) cap = 'HELD-OUT TEST · winner scored once on data the search never saw';
-  else if (s % 2 === 0) {
-    const gen = S.run.generations.find((x) => x.gen === g);
-    cap = `GEN ${g} · ${g === 0 ? 'seed prompts' : 'children'} scored on dev${gen ? ` (${gen.born.length} variants)` : ''}`;
-  } else {
-    const gen = S.run.generations.find((x) => x.gen === g);
-    cap = `GEN ${g} · select: ${gen ? gen.survivors.length : '?'} survive · best dev ${gen ? pct(gen.best_dev) : '?'}%`;
-  }
+  if (s > 2 * S.G + 1) cap = 'HELD-OUT TEST · winners scored once on data the search never saw';
+  else if (s % 2 === 0) cap = `GEN ${g} · ${g === 0 ? 'seed prompts' : 'children'} scored on dev${gen ? ` (${gen.born.length} variants)` : ''}`;
+  else cap = `GEN ${g} · select: ${gen ? gen.survivors.length : '?'} survive · best dev ${gen ? pct(gen.best_dev) : '?'}%`;
   $('#caption').textContent = cap;
+  $('#genInd').textContent = `generation ${g} of ${S.G}`;
   $('#scrub').value = s;
+  $('#scrub').setAttribute('aria-valuetext', cap);
   updateCurve(s);
-  if (S.playing && !reduce) followColumn(Math.min(S.G, g));
+  if (!reduce) followColumn(g);
 }
 
 function followColumn(g) {
   const box = $('#graphScroll');
   if (box.scrollWidth <= box.clientWidth + 2) return;
-  const x = S.layout.pos ? (46 + g * (S.layout.W - 80) / Math.max(1, S.G)) : 0;
+  const x = PAD.l + g * S.layout.colW;
   box.scrollTo({ left: Math.max(0, x - box.clientWidth / 2), behavior: 'smooth' });
 }
 
 /* ---------- playback ---------- */
-function setStep(s) { applyStep(Math.max(0, Math.min(S.maxStep, s))); if (S.step >= S.maxStep && !S.sel && S.winner && !isPhone()) selectNode(S.winner, false); }
+function setStep(s) {
+  applyStep(Math.max(0, Math.min(S.maxStep, s)));
+  if (S.step >= S.maxStep && !S.sel && S.winner && !isPhone()) selectNode(S.winner, false);
+}
 function startPlay() {
   if (S.step >= S.maxStep) S.step = 0;
   S.playing = true; $('#playIcon').setAttribute('d', 'M7 5h4v14H7zM13 5h4v14h-4z'); $('#btnPlay').setAttribute('aria-label', 'Pause');
@@ -206,7 +257,7 @@ function startPlay() {
     if (!S.inView) { S.timer = setTimeout(tick, 400); return; }
     if (S.step >= S.maxStep) { stopPlay(); return; }
     setStep(S.step + 1);
-    S.timer = setTimeout(tick, 1150 / S.speed);
+    S.timer = setTimeout(tick, 1000 / S.speed);
   };
   clearTimeout(S.timer);
   S.timer = setTimeout(tick, S.step === 0 ? 700 : 100);
@@ -220,10 +271,18 @@ function bindControls() {
   $('#btnPrev').onclick = () => { stopPlay(); setStep(S.step - 1); };
   $('#btnNext').onclick = () => { stopPlay(); setStep(S.step + 1); };
   $('#scrub').oninput = (e) => { stopPlay(); setStep(+e.target.value); };
-  $('#btnSpeed').onclick = (e) => { S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 0.5 : 1; e.target.textContent = `${S.speed}x`; };
+  $('#btnSpeed').onclick = (e) => { S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 4 : S.speed === 4 ? 0.5 : 1; e.target.textContent = `${S.speed}x`; };
   $('#btnClose').onclick = closeSheet; $('#scrim').onclick = closeSheet;
+  $('#graphScroll').addEventListener('scroll', edgeFades, { passive: true });
   new IntersectionObserver(([e]) => { S.inView = e.isIntersecting; }, { threshold: 0.15 }).observe($('#graphScroll'));
-  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (S.run) { buildGraph(); renderCurve(); updateCurve(S.step); } }, 150); });
+  let rt, lastW = innerWidth;
+  addEventListener('resize', () => {
+    clearTimeout(rt);
+    rt = setTimeout(() => {
+      if (!S.run || innerWidth === lastW) return;  // ignore mobile URL-bar height changes
+      lastW = innerWidth; buildGraph(); renderCurve(); renderHeldout(); updateCurve(S.step);
+    }, 150);
+  });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
 }
 
@@ -231,7 +290,7 @@ function bindControls() {
 function openSheet() { if (isPhone()) { $('#detail').classList.add('open'); $('#scrim').classList.add('open'); } }
 function closeSheet() { $('#detail').classList.remove('open'); $('#scrim').classList.remove('open'); }
 function selectNode(id, open) {
-  S.sel = id; applyStep(S.step); renderDetail(id);
+  S.sel = id; S.anc = ancestry(id); applyStep(S.step); renderDetail(id);
   if (open) openSheet();
 }
 
@@ -272,14 +331,14 @@ function renderDetail(id) {
       if (n.dev_bits[i] === '1' && par[0].dev_bits[i] === '0') fixed++;
       if (n.dev_bits[i] === '0' && par[0].dev_bits[i] === '1') broke++;
     }
-    delta = `<dt>vs parent</dt><dd>${pts(n.dev_acc - par[0].dev_acc)} (fixed ${fixed}, broke ${broke})</dd>`;
+    delta = `<dt>vs parent</dt><dd>${pts(n.dev_acc - par[0].dev_acc)} pts (fixed ${fixed}, broke ${broke})</dd>`;
   }
   let held = '';
   const arms = S.run.report?.arms || {};
   for (const a of Object.values(arms)) if (a.id === id) held += `<dt>held-out as ${esc(a.label)}</dt><dd>${pct(a.test_acc)}% [${pct(a.test_ci[0], 0)}–${pct(a.test_ci[1], 0)}]</dd>`;
   const text = par[0] ? lcsDiff(par[0].text, n.text) : esc(n.text);
   const parBtns = par.map((p) => `<button class="linkbtn" data-id="${p.id}">${esc(p.id)} (${pct(p.dev_acc)}%)</button>`).join(' ');
-  $('#detailBody').innerHTML = `<h3>variant ${esc(n.id)}</h3><div class="chips">${chips.join('')}</div>
+  body.innerHTML = `<h3>variant ${esc(n.id)}</h3><div class="chips">${chips.join('')}</div>
     <dl class="kv"><dt>dev accuracy</dt><dd>${pct(n.dev_acc)}% [${ci}]</dd>${delta}${held}
     <dt>few-shot examples</dt><dd>${n.n_shots}</dd></dl>
     <p class="sub">${par[0] ? `Prompt, diffed against parent${par.length > 1 ? 's (first shown)' : ''}` : 'Seed prompt'}</p>
@@ -288,43 +347,29 @@ function renderDetail(id) {
   body.querySelectorAll('.linkbtn[data-id]').forEach((b) => (b.onclick = () => selectNode(b.dataset.id, true)));
 }
 
-/* ---------- curve ---------- */
-const CV = { W: 760, H: 270, l: 46, r: 190, t: 18, b: 34 };
+/* ---------- score curve ---------- */
+const CV = { W: 760, H: 250, l: 46, r: 16, t: 16, b: 30 };
 function renderCurve() {
   const svg = $('#curve'); svg.replaceChildren();
-  const narrow = (svg.parentElement.clientWidth || 760) < 560;
-  CV.W = narrow ? Math.max(320, svg.parentElement.clientWidth - 32) : 760; CV.r = narrow ? 120 : 190; CV.H = narrow ? 240 : 270;
+  const w = svg.parentElement.clientWidth - 32;
+  CV.W = Math.max(300, w || 760); CV.H = CV.W < 560 ? 220 : 250;
   svg.setAttribute('viewBox', `0 0 ${CV.W} ${CV.H}`);
-  const gens = S.run.generations, arms = S.run.report?.arms;
+  const gens = S.run.generations;
   const vals = gens.flatMap((g) => [g.best_dev, g.mean_dev]);
-  if (arms) for (const a of Object.values(arms)) vals.push(a.test_ci[0], a.test_ci[1], a.dev_acc);
-  let lo = Math.max(0, Math.min(...vals) - 0.05), hi = Math.min(1, Math.max(...vals) + 0.05);
+  let lo = Math.max(0, Math.min(...vals) - 0.04), hi = Math.min(1, Math.max(...vals) + 0.04);
   if (hi - lo < 0.2) hi = lo + 0.2;
   const pw = CV.W - CV.l - CV.r, ph = CV.H - CV.t - CV.b;
   const X = (g) => CV.l + (S.G ? (g / S.G) * pw : 0), Y = (a) => CV.t + (1 - (a - lo) / (hi - lo)) * ph;
   const step = hi - lo > 0.5 ? 0.2 : 0.1;
-  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) {
-    el('line', { class: 'grid-line', x1: CV.l, x2: CV.W - CV.r + 10, y1: Y(v), y2: Y(v) }, svg);
+  for (let v = Math.ceil(lo / step - 1e-9) * step; v <= hi + 1e-9; v += step) {
+    el('line', { class: 'grid-line', x1: CV.l, x2: CV.W - CV.r, y1: Y(v), y2: Y(v) }, svg);
     el('text', { class: 'grid-label', x: 4, y: Y(v) + 3 }, svg).textContent = pct(v, 0) + '%';
   }
-  gens.forEach((g) => el('text', { class: 'grid-label', x: X(g.gen), y: CV.H - 12, 'text-anchor': 'middle' }, svg).textContent = `gen ${g.gen}`);
+  const every = CV.W < 560 ? 2 : 1;
+  gens.forEach((g) => { if (g.gen % every === 0) el('text', { class: 'grid-label', x: X(g.gen), y: CV.H - 10, 'text-anchor': 'middle' }, svg).textContent = `gen ${g.gen}`; });
   const line = (key, cls) => el('path', { class: cls, pathLength: 1, d: gens.map((g, i) => `${i ? 'L' : 'M'}${X(g.gen)},${Y(g[key])}`).join('') }, svg);
   S.cv = { mean: line('mean_dev', 'curve-mean'), best: line('best_dev', 'curve-line'), pts: [] };
   gens.forEach((g) => S.cv.pts.push(el('circle', { class: 'curve-pt', cx: X(g.gen), cy: Y(g.best_dev), r: 4.5 }, svg)));
-  S.cv.test = [];
-  if (arms) {
-    const x0 = CV.W - CV.r + (narrow ? 22 : 52), sp = narrow ? 34 : 54;
-    el('text', { class: 'col-label', x: x0 + sp, y: 12, 'text-anchor': 'middle' }, svg).textContent = narrow ? 'TEST' : 'HELD-OUT TEST';
-    const order = narrow ? [['seed0', 'seed'], ['random', 'rand'], ['evolved', 'evo']] : [['seed0', 'seed 0'], ['random', 'random'], ['evolved', 'evolved']];
-    order.forEach(([k, label], i) => {
-      const a = arms[k], x = x0 + i * sp;
-      const g = el('g', { class: 'curve-test' }, svg);
-      el('line', { x1: x, x2: x, y1: Y(a.test_ci[0]), y2: Y(a.test_ci[1]), stroke: k === 'evolved' ? '#d7ff3f' : 'rgba(237,236,230,.45)', 'stroke-width': 2 }, g);
-      el('circle', { cx: x, cy: Y(a.test_acc), r: 5.5, fill: k === 'evolved' ? '#07070a' : 'rgba(237,236,230,.6)', stroke: k === 'evolved' ? '#d7ff3f' : 'none', 'stroke-width': 2 }, g);
-      el('text', { class: 'grid-label', x, y: CV.H - 12, 'text-anchor': 'middle' }, g).textContent = label;
-      S.cv.test.push(g);
-    });
-  }
 }
 function updateCurve(s) {
   if (!S.cv) return;
@@ -333,44 +378,111 @@ function updateCurve(s) {
   S.cv.best.style.strokeDashoffset = off; S.cv.mean.style.strokeDashoffset = off;
   S.cv.pts.forEach((p, i) => (p.style.opacity = i < v ? 1 : 0));
   const final = !!S.run.report && s >= S.maxStep;
-  S.cv.test.forEach((g) => (g.style.opacity = final ? 1 : 0));
+  $('#heldout').classList.toggle('shown', final);
 }
 
-/* ---------- results ---------- */
-const ARM_LABEL = { seed0: 'First-draft seed prompt', best_seed: 'Best seed (picked on dev)', random: 'Random search, same budget', evolved: 'Evolved winner' };
+/* ---------- held-out markers ---------- */
+function renderHeldout() {
+  const svg = $('#heldout'); svg.replaceChildren();
+  const rep = S.run.report;
+  if (!rep) { $('#heldSub').textContent = 'appears when the run finishes'; svg.setAttribute('viewBox', '0 0 10 1'); return; }
+  const arms = rep.arms;
+  const keys = ['seed0', 'random', 'evolved', 'evolved_alt'].filter((k) => arms[k]);
+  const W = Math.max(300, $('#curvePanel').clientWidth - 32), narrow = W < 560;
+  const rowH = narrow ? 58 : 46, H = 24 + keys.length * rowH + 26;
+  const px0 = narrow ? 8 : 200, px1 = W - 14;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const vals = keys.flatMap((k) => [arms[k].test_ci[0], arms[k].test_ci[1], arms[k].dev_acc]);
+  if (rep.majority_rate != null) vals.push(rep.majority_rate);
+  const lo = Math.max(0, Math.floor((Math.min(...vals) - 0.03) * 20) / 20);
+  let hi = Math.min(1, Math.ceil((Math.max(...vals) + 0.03) * 20) / 20);
+  if (hi - lo < 0.2) hi = lo + 0.2;
+  const X = (a) => px0 + ((a - lo) / (hi - lo)) * (px1 - px0);
+  const step = hi - lo > 0.5 ? 0.2 : 0.1;
+  for (let v = Math.ceil(lo / step - 1e-9) * step; v <= hi + 1e-9; v += step) {
+    el('line', { class: 'grid-line', x1: X(v), x2: X(v), y1: 14, y2: H - 22 }, svg);
+    el('text', { class: 'grid-label', x: X(v), y: H - 6, 'text-anchor': 'middle' }, svg).textContent = pct(v, 0) + '%';
+  }
+  if (rep.majority_rate != null) {
+    el('line', { class: 'maj-line', x1: X(rep.majority_rate), x2: X(rep.majority_rate), y1: 14, y2: H - 22 }, svg);
+    el('text', { class: 'grid-label maj', x: X(rep.majority_rate) + 4, y: 11 }, svg).textContent = 'majority answer';
+  }
+  keys.forEach((k, i) => {
+    const a = arms[k], y = 24 + i * rowH + (narrow ? 38 : rowH / 2 - 2), hl = k === 'evolved' || k === 'evolved_alt';
+    const g = el('g', { class: `held-row ${hl ? 'evo' : ''}` }, svg);
+    const ly = narrow ? 24 + i * rowH + 10 : y - 2;
+    el('text', { class: 'held-label', x: 0, y: ly }, g).textContent = LABEL[k];
+    el('text', { class: 'held-val', x: 0, y: ly + 15 }, g).textContent = `${pct(a.test_acc)}%  [${pct(a.test_ci[0])}, ${pct(a.test_ci[1])}]`;
+    el('line', { class: 'whisk', x1: X(a.test_ci[0]), x2: X(a.test_ci[1]), y1: y, y2: y }, g);
+    el('line', { class: 'whisk', x1: X(a.test_ci[0]), x2: X(a.test_ci[0]), y1: y - 5, y2: y + 5 }, g);
+    el('line', { class: 'whisk', x1: X(a.test_ci[1]), x2: X(a.test_ci[1]), y1: y - 5, y2: y + 5 }, g);
+    el('circle', { class: 'held-dot', cx: X(a.test_acc), cy: y, r: 6 }, g);
+    const d = X(a.dev_acc);
+    el('path', { class: 'dev-mark', d: `M${d},${y - 7}l6,7l-6,7l-6,-7z` }, g);
+  });
+  $('#heldSub').textContent = `n = ${rep.n_test} test items${rep.majority_rate != null ? `, majority answer ${pct(rep.majority_rate)}%` : ''}. The gap between a diamond and its dot is the winner's curse.`;
+}
+
+/* ---------- tables ---------- */
+const ARM_LABEL = { seed0: 'First-draft seed prompt', best_seed: 'Best seed (picked on dev)', random: 'Random search, same budget', evolved: 'Evolved winner', evolved_alt: 'Evolved winner, 1.5B mutator' };
+const ARM_KEYS = ['seed0', 'best_seed', 'random', 'evolved', 'evolved_alt'];
 function renderResults() {
   const rep = S.run.report, tbl = $('#armsTable'), ver = $('#verdicts');
   if (!rep) { tbl.innerHTML = ''; ver.innerHTML = '<p class="verdict mono">Held-out numbers appear when the run finishes.</p>'; $('#resultsSub').textContent = ''; return; }
-  $('#resultsSub').textContent = `n = ${rep.n_test} test items, never seen by the search${rep.majority_rate != null ? ` · majority-class answer scores ${pct(rep.majority_rate)}%` : ''}`;
-  const rows = ['seed0', 'best_seed', 'random', 'evolved'].map((k) => {
+  $('#resultsSub').textContent = `seed ${S.run.seed} · n = ${rep.n_test} test items, never seen by the search`;
+  const rows = ARM_KEYS.filter((k) => rep.arms[k]).map((k) => {
     const a = rep.arms[k];
     return `<tr class="${k === 'evolved' ? 'hl' : ''}"><td>${ARM_LABEL[k]}</td><td>${a.id}</td><td>${pct(a.dev_acc)}%</td><td>${pct(a.test_acc)}%</td>
-      <td class="ci">${pct(a.test_ci[0])}–${pct(a.test_ci[1])}</td><td>${pts(-a.gap).replace('pts', '')}</td></tr>`;
+      <td class="ci">${pct(a.test_ci[0])}–${pct(a.test_ci[1])}</td><td>${pts(-a.gap)}</td></tr>`;
   }).join('');
-  tbl.innerHTML = `<thead><tr><th>Prompt</th><th>id</th><th>dev</th><th>test</th><th>95% CI</th><th>test − dev</th></tr></thead><tbody>${rows}</tbody>`;
+  tbl.innerHTML = `<thead><tr><th>Prompt</th><th>id</th><th>dev</th><th>test</th><th>95% CI</th><th>test − dev (pts)</th></tr></thead><tbody>${rows}</tbody>`;
   const names = { evolved_vs_seed0: 'first-draft seed', evolved_vs_best_seed: 'best seed', evolved_vs_random: 'random search' };
-  ver.innerHTML = Object.entries(rep.comparisons).map(([k, c]) => {
+  ver.innerHTML = Object.entries(rep.comparisons).filter(([k]) => names[k]).map(([k, c]) => {
     const good = c.p_mcnemar < 0.05 && c.diff > 0;
-    const text = `Evolved vs ${names[k]}: ${pts(c.diff)} (95% CI ${pts(c.lo)} to ${pts(c.hi)}), exact McNemar p = ${fmtP(c.p_mcnemar)} ` +
+    const text = `Evolved vs ${names[k]}: ${pts(c.diff)} pts (95% CI ${pts(c.lo)} to ${pts(c.hi)}), exact McNemar p ${fmtP(c.p_mcnemar)} ` +
       `(${c.a_only} better, ${c.b_only} worse). ${good ? 'Significant at 0.05.' : c.diff <= 0 ? 'No gain.' : 'Not significant at 0.05.'}`;
     return `<p class="verdict ${good ? 'ok' : 'warn'}">${text}</p>`;
   }).join('');
 }
 
+function renderSeeds() {
+  const T = S.summary?.tasks?.[S.task], tbl = $('#seedsTable'), ver = $('#seedVerdicts');
+  if (!T) { tbl.innerHTML = ''; ver.innerHTML = ''; $('#seedsSub').textContent = ''; return; }
+  $('#seedsSub').textContent = `${T.title} · ${T.seeds.length} seeds (${T.seeds.join(', ')}) · ${T.config.generations} generations, population ${T.config.pop} · ${T.n_dev} dev / ${T.n_test} test items · ${T.device} ${T.dtype}`;
+  const rows = ARM_KEYS.filter((k) => T.arms[k]).map((k) => {
+    const a = T.arms[k];
+    return `<tr class="${k === 'evolved' ? 'hl' : ''}"><td>${ARM_LABEL[k]}</td><td>${a.test.map((x) => pct(x)).join(' / ')}</td>
+      <td>${pct(a.test_mean)} ± ${pct(a.test_sd)}</td><td class="ci">${pct(a.pooled_ci[0])}–${pct(a.pooled_ci[1])}</td><td>${pts(-a.gap_mean)}</td></tr>`;
+  }).join('');
+  tbl.innerHTML = `<thead><tr><th>Prompt</th><th>test % per seed</th><th>mean ± SD</th><th>95% CI, items</th><th>test − dev (pts)</th></tr></thead><tbody>${rows}</tbody>`;
+  const names = { evolved_vs_random: 'random search', evolved_vs_best_seed: 'best seed', evolved_vs_seed0: 'first-draft seed' };
+  ver.innerHTML = Object.entries(names).filter(([k]) => T.comparisons[k]).map(([k, nm]) => {
+    const c = T.comparisons[k], good = c.lo > 0;
+    return `<p class="verdict ${good ? 'ok' : 'warn'}">Evolved minus ${nm}: ${pts(c.diff)} pts (95% CI ${pts(c.lo)} to ${pts(c.hi)}), ahead in ${c.seeds_ahead} of ${T.seeds.length} seeds; ` +
+      `per seed ${c.seed_diffs.map(pts).join(' / ')}; exact McNemar p ${c.per_seed.map((p) => (p.p_mcnemar < 0.001 ? '<0.001' : p.p_mcnemar.toFixed(3))).join(' / ')}.</p>`;
+  }).join('');
+}
+
 function renderOps() {
-  const list = $('#opsList'), rows = S.run.operator_stats || [];
-  if (!rows.length) { list.innerHTML = '<p class="muted mono">Available when the run finishes.</p>'; return; }
-  list.innerHTML = rows.map((r) => `<div class="op"><span>${esc(r.operator)}</span>
-    <span class="bar"><i style="width:${(100 * r.improved / r.n).toFixed(0)}%"></i></span>
-    <span class="num">${r.improved}/${r.n} improved · ${r.survived} survived · mean ${pts(r.mean_delta)}</span></div>`).join('');
+  const T = S.summary?.tasks?.[S.task], tbl = $('#opsTable');
+  if (!T || !T.operators.length) { tbl.innerHTML = '<tbody><tr><td class="muted">Available when the run finishes.</td></tr></tbody>'; $('#opsSub').textContent = ''; return; }
+  $('#opsSub').textContent = `${T.title}, ${T.seeds.length} seeds pooled. The share of children that beat their best parent on dev is the bar. Held-out columns use ${T.operator_n_test} test items and only the children that beat their parent on dev.`;
+  const gain = (x, k) => (k ? pts(x) : '–');
+  const row = (r, tag = '') => `<tr><td>${esc(r.operator)}${tag}</td><td>${r.children}</td>
+    <td class="barcell"><span class="bar"><i style="width:${(100 * r.beat_dev_rate).toFixed(0)}%"></i></span><span>${r.beat_dev} (${pct(r.beat_dev_rate, 0)}%)</span></td>
+    <td>${r.beat_dev ? `${r.beat_test} of ${r.beat_dev}` : '–'}</td><td>${gain(r.mean_dev_gain, r.beat_dev)}</td><td>${gain(r.mean_test_gain, r.beat_dev)}</td></tr>`;
+  let body = T.operators.map((r) => row(r)).join('');
+  const alt = (T.operators_alt || []).filter((r) => r.operator === 'llm_rewrite' || r.operator === 'llm_reflect');
+  if (alt.length) body += `<tr class="sep"><td colspan="6">Same LLM operators with the 1.5B model as mutator (separate arm)</td></tr>` + alt.map((r) => row(r, ' (1.5B)')).join('');
+  tbl.innerHTML = `<thead><tr><th>Operator</th><th>children</th><th>beat parent on dev</th><th>held-out: still better</th><th>dev gain (pts)</th><th>test gain (pts)</th></tr></thead><tbody>${body}</tbody>`;
 }
 
 /* ---------- live ---------- */
 async function detectLive() {
-  if (!/^https?:$/.test(location.protocol) || !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;
+  // the local server tags every response; a static host does not, so no request ever 404s
   try {
-    const r = await fetch('/health'); if (!r.ok) return;
-    const j = await r.json(); if (j.status !== 'ok') return;
+    const r = await fetch(location.pathname, { method: 'HEAD' });
+    if (r.headers.get('x-promptlab') !== 'live') return;
   } catch { return; }
   $('#live').hidden = false;
   $('#liveForm').addEventListener('submit', startLive);
@@ -385,7 +497,7 @@ async function startLive(e) {
   const { id } = await r.json();
   stopLive(); S.live = true; stopPlay();
   $('#modePill').textContent = 'Live run'; $('#modePill').classList.add('live');
-  document.querySelectorAll('.tab').forEach((t) => t.setAttribute('aria-selected', 'false'));
+  document.querySelectorAll('#runTabs .tab, #seedTabs .tab').forEach((t) => t.setAttribute('aria-selected', 'false'));
   S.es = new EventSource(`/api/live/${id}/stream`);
   let first = true;
   S.es.onmessage = (m) => {

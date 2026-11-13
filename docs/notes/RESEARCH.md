@@ -22,15 +22,16 @@ Related: a grammar-guided evolutionary paper ([2507.10326](https://arxiv.org/abs
 
 ## 2. Practical constraints I measured
 - CPU-only torch 2.11, transformers 5.7, numpy 2.4, openai 2.33. I do not use `datasets`; data is fetched as parquet with `huggingface_hub` and read with pandas.
-- Qwen2.5-0.5B-Instruct (fp32, batch 16, 6 new tokens): about 0.22 s per example (about 11 s per 48 items). In practice the final runs (40 dev items, 100 test items, 3 generations, 4 children, 3 threads) took 35 to 45 minutes each. The cache makes reruns near-instant.
+- The first (pilot) runs were on the CPU: Qwen2.5-0.5B-Instruct in float32 took about 0.22 s per example. The real-scale runs use the GPU (float16, batched generation); the SQLite cache makes reruns near-instant.
 
 ## 3. Models (download budget 3 GB)
 | Model | Licence | Size | Use |
 |---|---|---|---|
 | Qwen/Qwen2.5-0.5B-Instruct | Apache-2.0 | ~1.0 GB | task model and mutator |
+| Qwen/Qwen2.5-1.5B-Instruct | Apache-2.0 | ~3 GB | optional stronger mutator for the LLM-rewrite operators (task model stays 0.5B); GPU float16 only |
 | HuggingFaceTB/SmolLM2-360M-Instruct | Apache-2.0 | ~0.7 GB | optional transfer check; planned, not run |
 
-Qwen2.5-1.5B-Instruct (3.1 GB) is rejected: it alone exceeds the budget and is about 3x slower.
+Licences checked on the model cards (Hugging Face API, 13 Nov 2026).
 
 ## 4. Datasets (downloaded by script, never committed)
 | Task | Source | Licence | Notes |

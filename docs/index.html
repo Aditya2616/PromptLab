@@ -17,7 +17,8 @@
   <a class="brand mono" href="#top">PROMPTLAB</a>
   <span class="pill mono" id="modePill">Recorded run</span>
   <nav class="mono">
-    <a href="#results">Held-out</a>
+    <a href="#curvePanel">Scores</a>
+    <a href="#seedsec">Seeds</a>
     <a href="#operators">Operators</a>
     <a href="#notes">Notes</a>
   </nav>
@@ -27,23 +28,30 @@
   <section class="hero">
     <p class="eyebrow mono">Prompt engineering as optimisation &middot; mutate &rarr; score &rarr; select</p>
     <h1>Prompts, <em>evolved</em> against a score.</h1>
-    <p class="lede">A population of prompt variants is mutated, scored on a dev split, and culled. The winner is then
-      tested once on data the search never saw. Everything below is a real run of this code on a small local model, replayed.</p>
+    <p class="lede">A population of prompt variants is mutated, scored on a dev split, and culled. The winners are then
+      tested once on data the search never saw, next to a random-search baseline that got the same number of dev
+      evaluations. Everything below replays real runs of this code on a small local model.</p>
   </section>
 
   <section id="lab" aria-label="Evolution viewer">
-    <div class="tabs" id="runTabs" role="tablist" aria-label="Task"></div>
+    <div class="picker">
+      <div class="tabs" id="runTabs" role="tablist" aria-label="Task"></div>
+      <div class="seeds" id="seedTabs" role="tablist" aria-label="Seed"></div>
+    </div>
     <p class="runmeta mono" id="runMeta"></p>
 
     <div class="stage-grid">
       <div class="panel stage">
         <div class="stage-head">
           <span class="caption mono" id="caption">Loading run</span>
-          <span class="legend mono">
-            <i class="lg fresh"></i>scored <i class="lg keep"></i>survivor <i class="lg cull"></i>culled
-          </span>
+          <span class="genind mono" id="genInd" aria-live="off"></span>
         </div>
-        <div class="graph-scroll" id="graphScroll"><svg id="graph" role="img" aria-label="Lineage graph: one column per generation"></svg></div>
+        <div class="legend mono">
+          <span><i class="lg fresh"></i>scored</span><span><i class="lg keep"></i>survivor</span><span><i class="lg cull"></i>culled</span>
+        </div>
+        <div class="graph-wrap" id="graphWrap">
+          <div class="graph-scroll" id="graphScroll" tabindex="0" aria-label="Lineage graph, scrolls sideways"><svg id="graph" role="img" aria-label="Lineage graph: one column per generation"></svg></div>
+        </div>
         <div class="controls">
           <button class="btn icon" id="btnPlay" aria-label="Play">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path id="playIcon" d="M8 5v14l11-7z" fill="currentColor"/></svg>
@@ -64,23 +72,37 @@
     <div class="scrim" id="scrim"></div>
   </section>
 
-  <section class="panel curve" aria-label="Score curve">
+  <section class="panel curve" id="curvePanel" aria-label="Score curve">
     <div class="sec-head"><h2>Best score per generation</h2>
-      <p class="mono muted">Dev (search) vs held-out test. The gap between the two is what selection overfits.</p></div>
-    <svg id="curve" role="img" aria-label="Best dev score per generation, with held-out test markers"></svg>
+      <p class="mono muted">Dev score of the best survivor (lime) and the mean of the population (grey), as the replay advances.</p></div>
+    <svg id="curve" role="img" aria-label="Best and mean dev score per generation"></svg>
+    <div class="sec-head sub-head"><h3>Held-out test, scored once after the search</h3>
+      <p class="mono muted" id="heldSub"></p></div>
+    <div class="legend mono key">
+      <span><svg width="22" height="12" aria-hidden="true"><line x1="3" x2="19" y1="6" y2="6" stroke="currentColor" stroke-width="2"/><circle cx="11" cy="6" r="4" fill="currentColor"/></svg>held-out test, 95% interval</span>
+      <span><svg width="14" height="12" aria-hidden="true"><path d="M7 1l5 5-5 5-5-5z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>dev score it was picked on</span>
+    </div>
+    <svg id="heldout" role="img" aria-label="Held-out test accuracy with intervals for the seed prompt, the random-search winner and the evolved winner"></svg>
   </section>
 
   <section class="panel" id="results" aria-label="Held-out results">
-    <div class="sec-head"><h2>Held-out test, touched once</h2>
+    <div class="sec-head"><h2>This run, held-out</h2>
       <p class="mono muted" id="resultsSub"></p></div>
     <div class="table-wrap"><table class="results" id="armsTable"></table></div>
     <div id="verdicts" class="verdicts"></div>
   </section>
 
+  <section class="panel" id="seedsec" aria-label="All seeds">
+    <div class="sec-head"><h2>All seeds, same configuration</h2>
+      <p class="mono muted" id="seedsSub"></p></div>
+    <div class="table-wrap"><table class="results" id="seedsTable"></table></div>
+    <div id="seedVerdicts" class="verdicts"></div>
+  </section>
+
   <section class="panel" id="operators" aria-label="Operator statistics">
     <div class="sec-head"><h2>Which mutations paid off</h2>
-      <p class="mono muted">A mutation counts as improved if the child scored higher on dev than its best parent.</p></div>
-    <div id="opsList" class="ops"></div>
+      <p class="mono muted" id="opsSub"></p></div>
+    <div class="table-wrap"><table class="results ops-table" id="opsTable"></table></div>
   </section>
 
   <section class="panel live" id="live" hidden aria-label="Live run">
@@ -101,10 +123,10 @@
     <h2>Read this before trusting a number</h2>
     <ul>
       <li><b>Much of the gain is output-format control.</b> A 0.5B model often knows the answer but replies in a shape the scorer rejects. Telling it to reply with only the answer is worth many points; that is a real effect, but it is not reasoning.</li>
-      <li><b>Dev sets are small and noisy.</b> A few dozen items means a standard error of several points, so some "improvements" during search are luck. That is why the winner is re-scored on a separate test split.</li>
+      <li><b>Dev sets are noisy.</b> At a couple of hundred items the dev score still has a standard error of several points, so some "improvements" during search are luck. That is why winners are re-scored on a separate test split.</li>
       <li><b>The test split is touched once</b>, after the search is finished. Dev minus test accuracy of the winner is the winner's-curse gap.</li>
-      <li><b>Random search at equal budget</b> is the fair baseline. If evolution does not beat it, selection is not adding anything.</li>
-      <li>One seed per task, one small model. Confidence intervals are shown; a result that is not significant is reported as it is.</li>
+      <li><b>Random search at equal budget</b> is the fair baseline: same operators, no selection feedback, the same number of dev evaluations. If evolution does not beat it, selection is not adding anything.</li>
+      <li><b>BoolQ has no headroom</b> for a model this size: the majority answer already scores about as well as the first-draft prompt does (the numbers are in the tables above).</li>
     </ul>
   </section>
 </main>
